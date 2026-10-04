@@ -1,0 +1,10 @@
+[
+  {"id":"INC-01","title":"Null reference in order handler","description":"Order placement fails while reading missing order state."},
+  {"id":"INC-02","title":"SQLite lock contention","description":"Order writes are delayed and concurrent requests can time out."},
+  {"id":"INC-03","title":"Missing payment configuration","description":"Order handling fails when payment gateway configuration is absent."},
+  {"id":"INC-04","title":"Memory growth per request","description":"Order traffic retains unnecessary request state."},
+  {"id":"INC-05","title":"Authentication failure spike","description":"Order tokens are rejected as expired."},
+  {"id":"INC-06","title":"Slow dependency","description":"A simulated external payment call stalls order handling."},
+  {"id":"INC-07","title":"Pagination boundary error","description":"A page can omit an item at a boundary."},
+  {"id":"INC-08","title":"Concurrent stock update","description":"Simultaneous orders can overwrite stock updates."}
+]
