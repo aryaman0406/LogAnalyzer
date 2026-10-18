@@ -14,7 +14,7 @@ from typing import Any
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from sample_app.incidents import active_incident, decrement_stock, order_failure, paginate
+from sample_app.incidents import active_incident, decrement_stock, order_failure, paginate, reset_request_incident, set_request_incident
 
 ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = Path(os.getenv("SAMPLE_DB", ROOT / "data" / "sample_app.db"))
@@ -71,6 +71,7 @@ app = FastAPI(title="Incident Sample Shop", version="0.1.0", lifespan=lifespan)
 @app.middleware("http")
 async def request_logging(request: Request, call_next):
     request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+    incident_token = set_request_incident(request.headers.get("x-demo-incident"))
     started = time.monotonic()
     try:
         response = await call_next(request)
@@ -82,6 +83,8 @@ async def request_logging(request: Request, call_next):
     except Exception:
         logger.exception("request failed", extra={"request_id": request_id})
         raise
+    finally:
+        reset_request_incident(incident_token)
 
 
 class OrderRequest(BaseModel):

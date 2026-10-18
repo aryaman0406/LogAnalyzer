@@ -2,12 +2,23 @@
 from __future__ import annotations
 import importlib
 import os
+from contextvars import ContextVar
+
+_request_incident: ContextVar[str | None] = ContextVar("request_incident", default=None)
+
+def set_request_incident(value: str | None):
+    """Set a request-local incident override and return its reset token."""
+    return _request_incident.set(value if value in INCIDENT_IDS else None)
+
+def reset_request_incident(token) -> None:
+    """Restore the previous request-local incident selection."""
+    _request_incident.reset(token)
 
 INCIDENT_IDS = tuple(f"INC-{i:02d}" for i in range(1, 9))
 
 def active_incident() -> str | None:
     """Return the configured incident ID, if it is recognized."""
-    value = os.getenv("ACTIVE_INCIDENT", "").upper()
+    value = _request_incident.get() or os.getenv("ACTIVE_INCIDENT", "").upper()
     return value if value in INCIDENT_IDS else None
 
 def _mode():

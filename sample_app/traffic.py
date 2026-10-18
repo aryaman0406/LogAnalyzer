@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import random
 import time
 
@@ -12,17 +11,16 @@ import httpx
 def simulate(base_url: str, requests: int = 60, incident: str = "INC-01", seed: int = 7) -> None:
     """Send healthy catalog traffic, then requests that exercise one incident."""
     random.seed(seed)
-    os.environ["ACTIVE_INCIDENT"] = incident
     with httpx.Client(base_url=base_url, timeout=5.0) as client:
         for _ in range(requests):
             if random.random() < 0.85:
-                client.get("/products", params={"limit": 10})
+                client.get("/products", params={"limit": 10}, headers={"X-Demo-Incident": incident})
             else:
-                client.get("/users")
+                client.get("/users", headers={"X-Demo-Incident": incident})
             time.sleep(random.uniform(0.005, 0.025))
         for _ in range(max(3, requests // 10)):
             client.post("/orders", json={"product_id": 1, "quantity": 1},
-                        headers={"X-Demo-Token": "valid-demo-token"})
+                        headers={"X-Demo-Token": "valid-demo-token", "X-Demo-Incident": incident})
 
 
 if __name__ == "__main__":
