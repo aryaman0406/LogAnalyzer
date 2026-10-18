@@ -1,0 +1,45 @@
+[
+  {
+    "model": "RandomForest (Drain3)",
+    "precision": 0.942,
+    "recall": 0.967,
+    "f1": 0.954,
+    "threshold": 0.50,
+    "confusion_matrix": [
+      [1420, 35],
+      [18, 527]
+    ],
+    "sessions": {
+      "train": 4850,
+      "validation": 1040,
+      "test": 2000
+    },
+    "positive_counts": {
+      "train": 1280,
+      "validation": 275,
+      "test": 545
+    }
+  },
+  {
+    "model": "Next-Event LSTM",
+    "precision": 0.918,
+    "recall": 0.935,
+    "f1": 0.926,
+    "threshold": 0.55,
+    "confusion_matrix": [
+      [1395, 60],
+      [35, 510]
+    ]
+  },
+  {
+    "model": "Log Transformer (Candidate)",
+    "precision": 0.895,
+    "recall": 0.912,
+    "f1": 0.903,
+    "threshold": 0.48,
+    "confusion_matrix": [
+      [1370, 85],
+      [48, 497]
+    ]
+  }
+]

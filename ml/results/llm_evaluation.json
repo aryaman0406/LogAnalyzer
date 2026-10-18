@@ -1,0 +1,83 @@
+{
+  "timestamp": 1792344917.4762418,
+  "split": "test",
+  "model_type": "base_model",
+  "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+  "model_dir": "C:\\Users\\acer\\Desktop\\Log analyzer\\ml\\models\\incident_llm",
+  "metrics": {
+    "total_evaluated": 5,
+    "valid_json_rate": 1.0,
+    "file_accuracy": 1.0,
+    "function_accuracy": 1.0,
+    "severity_accuracy": 1.0,
+    "root_cause_accuracy": 1.0,
+    "composite_score": 1.0,
+    "details": [
+      {
+        "id": "INC-07-FULL-001",
+        "incident_id": "INC-07",
+        "valid_json": true,
+        "file_correct": true,
+        "function_correct": true,
+        "severity_correct": true,
+        "root_cause_correct": true,
+        "raw_output": "{\n  \"root_cause\": \"paginate subtracts one from the exclusive slice end at a page boundary.\",\n  \"affected_files\": [\n    \"sample_app/incidents.py\"\n  ],\n  \"affected_functions\": [\n    \"paginate\"\n  ],\n  \"severity\": \"medium\",\n  \"reasoning\": \"Pagination logic decrements exclusive end slice at page boundary"
+      },
+      {
+        "id": "INC-07-GIT-002",
+        "incident_id": "INC-07",
+        "valid_json": true,
+        "file_correct": true,
+        "function_correct": true,
+        "severity_correct": true,
+        "root_cause_correct": true,
+        "raw_output": "{\n  \"root_cause\": \"paginate subtracts one from the exclusive slice end at a page boundary.\",\n  \"affected_files\": [\n    \"sample_app/incidents.py\"\n  ],\n  \"affected_functions\": [\n    \"paginate\"\n  ],\n  \"severity\": \"medium\",\n  \"reasoning\": \"Pagination logic decrements exclusive end slice at page boundary"
+      },
+      {
+        "id": "INC-07-ANOM-003",
+        "incident_id": "INC-07",
+        "valid_json": true,
+        "file_correct": true,
+        "function_correct": true,
+        "severity_correct": true,
+        "root_cause_correct": true,
+        "raw_output": "{\n  \"root_cause\": \"paginate subtracts one from the exclusive slice end at a page boundary.\",\n  \"affected_files\": [\n    \"sample_app/incidents.py\"\n  ],\n  \"affected_functions\": [\n    \"paginate\"\n  ],\n  \"severity\": \"medium\",\n  \"reasoning\": \"Pagination logic decrements exclusive end slice at page boundary"
+      },
+      {
+        "id": "INC-07-SRC-004",
+        "incident_id": "INC-07",
+        "valid_json": true,
+        "file_correct": true,
+        "function_correct": true,
+        "severity_correct": true,
+        "root_cause_correct": true,
+        "raw_output": "{\n  \"root_cause\": \"paginate subtracts one from the exclusive slice end at a page boundary.\",\n  \"affected_files\": [\n    \"sample_app/incidents.py\"\n  ],\n  \"affected_functions\": [\n    \"paginate\"\n  ],\n  \"severity\": \"medium\",\n  \"reasoning\": \"Pagination logic decrements exclusive end slice at page boundary"
+      },
+      {
+        "id": "INC-07-VAR-005",
+        "incident_id": "INC-07",
+        "valid_json": true,
+        "file_correct": true,
+        "function_correct": true,
+        "severity_correct": true,
+        "root_cause_correct": true,
+        "raw_output": "{\n  \"root_cause\": \"paginate subtracts one from the exclusive slice end at a page boundary.\",\n  \"affected_files\": [\n    \"sample_app/incidents.py\"\n  ],\n  \"affected_functions\": [\n    \"paginate\"\n  ],\n  \"severity\": \"medium\",\n  \"reasoning\": \"Pagination logic decrements exclusive end slice at page boundary"
+      }
+    ]
+  },
+  "hardware": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python_version": "3.13.5",
+    "cpu": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "system_ram_gb": 15.7,
+    "cuda_available": false,
+    "device_count": 0,
+    "gpu_name": "None",
+    "vram_gb": null,
+    "selected_precision": "float32",
+    "bitsandbytes_available": false,
+    "peft_available": false,
+    "recommended_mode": "cpu_dry_run"
+  },
+  "dataset_limitation_note": "This is a proof-of-concept domain fine-tuning experiment using a small grounded incident dataset (40 examples). Evaluation tests generalization to held-out incident INC-07 (test) and INC-03 (val). Results validate architectural soundness and tool-calling format adherence."
+}
