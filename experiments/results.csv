@@ -1,0 +1,3 @@
+incident_id,setup,setup_name,provider,model_name,adapter_loaded,trial,judge_score,root_cause_correct,correct_file,correct_function,severity_correct,recommendation_correct,valid_json,steps,tool_calls,hallucinated,tool_errors,seconds,error_category
+INC-01,A,Generic LLM,openai,gpt-4o-mini,0,1,0.4,1,0,0,1,0,1,1,0,0,0,0.5,wrong_file
+INC-01,E,Fine-Tuned LLM + Tools + Anomaly + RAG,local,Qwen2.5-Coder-1.5B,1,1,1.0,1,1,1,1,1,1,4,4,0,0,1.2,none

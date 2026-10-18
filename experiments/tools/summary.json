@@ -1,0 +1,6 @@
+{
+  "setup": "B",
+  "name": "Generic LLM + Tools",
+  "status": "NOT RUN / CONFIGURATION ERROR",
+  "reason": "OPENAI_API_KEY is not configured in environment"
+}

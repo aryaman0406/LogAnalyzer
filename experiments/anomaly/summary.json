@@ -1,0 +1,6 @@
+{
+  "setup": "C",
+  "name": "Generic LLM + Tools + Anomaly",
+  "status": "NOT RUN / CONFIGURATION ERROR",
+  "reason": "OPENAI_API_KEY is not configured in environment"
+}
