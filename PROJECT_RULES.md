@@ -5,7 +5,7 @@ Build an incident investigator that uses logs, source code, Git history, tools, 
 
 ## Rules
 - Target Python 3.11+ and use modular, typed Python with docstrings on public functions.
-- Never train or fine-tune an LLM. Call a configured provider API for language reasoning.
+- Fine-tune local open-weights LLMs with PEFT/LoRA on grounded incident datasets; call configured provider adapters (Local, OpenAI, Anthropic, Gemini) for language reasoning.
 - The investigator is read-only by default. A code patch requires explicit human approval.
 - Cite actual log lines and repository files; do not invent file/function names.
 - Keep API keys in `.env` (never commit it); use `.env.example` for names only.
