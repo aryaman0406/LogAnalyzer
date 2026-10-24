@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/Kbd'
-import { Play, Square, Loader2, Sparkles } from 'lucide-react'
+import { Square, Loader2, Sparkles } from 'lucide-react'
 import { useKeyboardShortcut } from '@/lib/hooks/useKeyboardShortcut'
 
 interface RunButtonProps {

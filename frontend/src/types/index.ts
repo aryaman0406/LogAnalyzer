@@ -99,6 +99,12 @@ export interface ModelStatusInfo {
     status: string
     index_path?: string
   }
+  external_ml_service?: {
+    configured: boolean
+    available: boolean
+    status: string
+    base_url?: string
+  }
 }
 
 export interface EvalRow {

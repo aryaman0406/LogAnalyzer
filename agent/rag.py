@@ -20,12 +20,9 @@ class TechnicalDocumentationRAG:
     def _collect_documents(self) -> list[tuple[str, str, str]]:
         """Collect Markdown files, documentation, and incident catalogs."""
         docs = []
-        # Target docs: READMEs, runbooks, catalogs, project rules
+        # Target docs: Project README and Incident Catalog
         doc_files = [
             ROOT / "README.md",
-            ROOT / "PROJECT_RULES.md",
-            ROOT / "REPORT.md",
-            ROOT / "ml" / "incident" / "README.md",
             ROOT / "sample_app" / "incidents_catalog.json"
         ]
 

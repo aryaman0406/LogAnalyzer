@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchIncidents } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, ChevronDown, Flame, ShieldAlert, Bug } from 'lucide-react'
+import { ChevronDown, Flame, Bug } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Badge } from '@/components/ui/Badge'
 import type { Incident } from '@/types'
