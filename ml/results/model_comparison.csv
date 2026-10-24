@@ -1,0 +1,2 @@
+model,precision,recall,f1,threshold,sessions,positive_counts
+RandomForest,0.9968404423380727,0.9992082343626286,0.9980229339659945,0.4,"{'train': 402542, 'validation': 86259, 'test': 86260}","{'train': 11787, 'validation': 2525, 'test': 2526}"

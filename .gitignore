@@ -20,4 +20,5 @@ ml/models/**/*.joblib
 ml/models/*.joblib
 ml/models/*.pt
 ml/models/*.bin
-
+eval/**/*.md
+experiments/**/*.md

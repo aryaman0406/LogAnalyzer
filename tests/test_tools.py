@@ -10,7 +10,7 @@ def test_run_command_allowlist():
     with pytest.raises(ValueError): tools.run_command("pytest --rootdir=C:/")
 
 def test_run_command_reads_repo_file():
-    assert "Incident / Log Debugging Agent" in tools.run_command("cat PROJECT_RULES.md")
+    assert "Incident Agent V2" in tools.run_command("cat README.md")
 
 def test_outputs_are_truncated():
     assert len(tools._clip("x"*10000)) <= tools.MAX_CHARS+20

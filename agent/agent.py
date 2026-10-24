@@ -182,6 +182,12 @@ class Investigator:
                             state.add_evidence("anomaly", "Drain3/RF", summary[:200], source="ML Anomaly Detector")
                     except Exception:
                         pass
+                elif call["name"] == "predict_custom_ml":
+                    try:
+                        ml_data = json.loads(output)
+                        state.record_ml_prediction(ml_data)
+                    except Exception:
+                        pass
                 elif call["name"] == "search_docs":
                     state.add_evidence("rag", args.get("query", "docs"), summary[:200], source="Technical RAG")
                 elif call["name"] in {"git_log", "git_diff"}:

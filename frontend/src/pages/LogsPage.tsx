@@ -6,10 +6,9 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { LogViewer } from '@/components/logs/LogViewer'
 import { LogSparkline } from '@/components/logs/LogSparkline'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Search, Filter, RefreshCw, FileText, AlertCircle, Terminal, Activity } from 'lucide-react'
+import { Search, Filter, RefreshCw, FileText, AlertCircle, Activity } from 'lucide-react'
 
 export function LogsPage() {
   const [searchParams, setSearchParams] = useSearchParams()

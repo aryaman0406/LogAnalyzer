@@ -10,7 +10,8 @@ from pydantic import BaseModel
 from agent.agent import Investigator
 from agent.llm import LLMClient
 from agent.tools import detect_anomalies
-from ml.incident.config import detect_hardware
+from api.hardware import detect_hardware
+from api.services.ml_model_client import get_ml_model_client
 
 ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT / "data" / "investigations.sqlite3"
@@ -192,26 +193,34 @@ def patch_apply(ident: str, approval: ApprovalRequest):
 @app.get("/api/models")
 @app.get("/models")
 def list_models():
-    """List available LLM providers and models."""
-    adapter_path = ROOT / "ml" / "models" / "incident_llm"
-    has_adapter = (adapter_path / "adapter_config.json").is_file() or (adapter_path / "dry_run_report.json").is_file()
+    """List available LLM providers, Gemini primary engine, and custom ML service status."""
+    ml_client = get_ml_model_client()
     return {
         "providers": [
-            {"id": "local", "name": "Fine-Tuned Incident LLM", "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct", "available": True, "adapter_ready": has_adapter},
+            {"id": "gemini", "name": "Google Gemini (Recommended)", "model": "gemini-2.0-flash", "available": bool(os.getenv("GEMINI_API_KEY")), "primary": True},
             {"id": "openai", "name": "OpenAI", "model": "gpt-4o-mini", "available": bool(os.getenv("OPENAI_API_KEY"))},
             {"id": "anthropic", "name": "Anthropic", "model": "claude-3-5-haiku-latest", "available": bool(os.getenv("ANTHROPIC_API_KEY"))},
-            {"id": "gemini", "name": "Google Gemini", "model": "gemini-2.0-flash", "available": bool(os.getenv("GEMINI_API_KEY"))}
-        ]
+            {"id": "local", "name": "Diagnostic Engine (Offline)", "model": "diagnostic-engine", "available": True, "adapter_ready": True}
+        ],
+        "external_ml_service": {
+            "configured": ml_client.is_configured,
+            "base_url": ml_client.base_url or "NOT_CONFIGURED (set ML_MODEL_API_URL)"
+        }
     }
+
+@app.get("/api/models/ml-service/status")
+def ml_service_status():
+    """Check health and connectivity of the external Custom ML Model service."""
+    return get_ml_model_client().check_health()
 
 @app.get("/api/models/status")
 @app.get("/models/status")
 def models_status():
-    """Return active provider, local model availability, and hardware diagnostics."""
+    """Return active provider, external ML service status, and hardware diagnostics."""
     client = LLMClient()
     hw = detect_hardware()
-    adapter_path = ROOT / "ml" / "models" / "incident_llm"
-    has_adapter = (adapter_path / "adapter_config.json").is_file() or (adapter_path / "dry_run_report.json").is_file()
+    ml_client = get_ml_model_client()
+    ml_health = ml_client.check_health()
 
     from ml.predict import MODEL as ANOMALY_MODEL
     anomaly_available = ANOMALY_MODEL.exists()
@@ -222,7 +231,7 @@ def models_status():
     return {
         "active_provider": client.provider,
         "active_model": client.model,
-        "adapter_loaded": has_adapter,
+        "adapter_loaded": False,
         "status": "ready",
         "hardware": hw,
         "anomaly_detector": {
@@ -234,6 +243,12 @@ def models_status():
             "available": rag_ready,
             "status": "READY" if rag_ready else "UNAVAILABLE",
             "index_path": "data/rag_index/chunks_metadata.json"
+        },
+        "external_ml_service": {
+            "configured": ml_client.is_configured,
+            "available": ml_health.get("available", False),
+            "status": ml_health.get("status", "NOT_CONFIGURED"),
+            "base_url": ml_client.base_url or "UNCONFIGURED"
         }
     }
 

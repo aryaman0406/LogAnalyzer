@@ -3,7 +3,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { TimelineEvent } from './TimelineEvent'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Badge } from '@/components/ui/Badge'
-import { Loader2, Terminal, Activity, Sparkles, Clock3 } from 'lucide-react'
+import { Loader2, Terminal, Activity, Clock3 } from 'lucide-react'
 import type { SSEEvent } from '@/types'
 
 interface AgentTimelineProps {

@@ -19,6 +19,7 @@ TOOL_SCHEMAS = [
  {"type":"function","function":{"name":"git_diff","description":"Read the patch introduced by a commit.","parameters":{"type":"object","properties":{"commit":{"type":"string"}},"required":["commit"]}}},
  {"type":"function","function":{"name":"search_docs","description":"Search local project documentation.","parameters":{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}}},
  {"type":"function","function":{"name":"detect_anomalies","description":"Score sessions with the trained local detector if available.","parameters":{"type":"object","properties":{"log_file":{"type":"string"}},"required":["log_file"]}}},
+ {"type":"function","function":{"name":"predict_custom_ml","description":"Query independent external Custom ML model service for incident classification and candidate affected files.","parameters":{"type":"object","properties":{"log_file":{"type":"string"},"incident_id":{"type":"string"}},"required":["log_file"]}}},
  {"type":"function","function":{"name":"run_command","description":"Run a constrained local diagnostic command (python -m, pytest, cat).","parameters":{"type":"object","properties":{"cmd":{"type":"string"}},"required":["cmd"]}}}
 ]
 
@@ -156,6 +157,63 @@ def detect_anomalies(log_file: str) -> str:
             "explanation": f"Inference error: {str(exc)}"
         }, indent=2))
 
+def predict_custom_ml(log_file: str, incident_id: str = "") -> str:
+    """Invoke external Custom ML Model service to predict incident category and affected files."""
+    try:
+        from api.services.ml_model_client import get_ml_model_client
+        client = get_ml_model_client()
+        if not client.is_configured:
+            return _clip(json.dumps({
+                "available": False,
+                "degraded": True,
+                "predicted_category": "unavailable",
+                "confidence": 0.0,
+                "explanation": "External ML Model service is not configured (ML_MODEL_API_URL is unset). Continuing in native diagnostics mode."
+            }, indent=2))
+
+        path = _path(log_file)
+        entries = []
+        with path.open(encoding="utf-8", errors="replace") as stream:
+            for line in stream:
+                line_str = line.strip()
+                if not line_str:
+                    continue
+                try:
+                    item = json.loads(line_str)
+                    msg = str(item.get("message", ""))
+                    msg_clean = re.sub(r"(?i)(password|token|secret|key|authorization)=['\"]?[^'\s]+", r"\1=[REDACTED]", msg)
+                    entries.append({
+                        "timestamp": item.get("timestamp", ""),
+                        "level": item.get("level", "INFO"),
+                        "message": msg_clean[:500],
+                        "source": item.get("logger", "")
+                    })
+                except json.JSONDecodeError:
+                    entries.append({"timestamp": "", "level": "UNKNOWN", "message": line_str[:500], "source": ""})
+                if len(entries) >= 100:
+                    break
+
+        pred = client.predict(log_entries=entries, incident_id=incident_id)
+        return _clip(json.dumps({
+            "available": pred.available,
+            "degraded": pred.degraded,
+            "model_version": pred.model_version,
+            "predicted_category": pred.predicted_category,
+            "confidence": pred.confidence,
+            "suspected_files": pred.suspected_files,
+            "suspected_functions": pred.suspected_functions,
+            "severity": pred.severity,
+            "anomaly_score": pred.anomaly_score,
+            "features_extracted": pred.features_extracted,
+            "error_message": pred.error_message
+        }, indent=2))
+    except Exception as exc:
+        return _clip(json.dumps({
+            "available": False,
+            "degraded": True,
+            "explanation": f"ML model client error: {type(exc).__name__}"
+        }, indent=2))
+
 def run_command(cmd: str) -> str:
     try: parts=shlex.split(cmd)
     except ValueError as exc: raise ValueError("invalid command") from exc
@@ -167,7 +225,7 @@ def run_command(cmd: str) -> str:
     result=subprocess.run(parts,cwd=ROOT,capture_output=True,text=True,timeout=15,check=False)
     return _clip(f"exit={result.returncode}\n{result.stdout}\n{result.stderr}")
 
-TOOL_FUNCTIONS = {f.__name__: f for f in (read_logs,grep_logs,log_stats,search_code,read_file,git_log,git_diff,search_docs,detect_anomalies,run_command)}
+TOOL_FUNCTIONS = {f.__name__: f for f in (read_logs,grep_logs,log_stats,search_code,read_file,git_log,git_diff,search_docs,detect_anomalies,predict_custom_ml,run_command)}
 
 def execute_tool(name: str, arguments: dict[str, Any]) -> str:
     """Dispatch an allowlisted tool with bounded serialized output."""

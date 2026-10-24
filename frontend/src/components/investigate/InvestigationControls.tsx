@@ -47,10 +47,10 @@ export function InvestigationControls({
           disabled={disabled}
           className="w-full rounded-xl border border-border bg-surface/60 px-3 py-2 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-accent font-mono disabled:opacity-50 transition-all cursor-pointer"
         >
-          <option value="local">Fine-Tuned Incident LLM (Qwen2.5-Coder-1.5B)</option>
+          <option value="gemini">Google Gemini 2.0 Flash (Recommended)</option>
           <option value="openai">OpenAI (gpt-4o-mini)</option>
-          <option value="gemini">Google Gemini (gemini-2.0-flash)</option>
           <option value="anthropic">Anthropic (claude-3-5-haiku)</option>
+          <option value="local">Diagnostic Engine (Offline Safe Mode)</option>
         </select>
       </div>
 

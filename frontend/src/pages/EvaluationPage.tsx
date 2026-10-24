@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/Badge'
-import { BarChart3, RefreshCw, AlertCircle, Award, Target, ShieldCheck, Sparkles } from 'lucide-react'
+import { BarChart3, RefreshCw, AlertCircle, Sparkles } from 'lucide-react'
 import type { EvalRow } from '@/types'
 
 export function EvaluationPage() {

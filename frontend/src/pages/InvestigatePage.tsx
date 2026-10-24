@@ -9,11 +9,11 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { Badge } from '@/components/ui/Badge'
 import { useInvestigation } from '@/lib/hooks/useInvestigation'
 import { fetchModelStatus } from '@/lib/api'
-import { Sparkles, ShieldCheck, Activity, Cpu, Database, BookOpen, Bot } from 'lucide-react'
+import { Activity, BookOpen, Bot } from 'lucide-react'
 
 export function InvestigatePage() {
   const [incidentId, setIncidentId] = useState<string>('INC-01')
-  const [provider, setProvider] = useState<string>('local')
+  const [provider, setProvider] = useState<string>('gemini')
   const [useAnomalyDetector, setUseAnomalyDetector] = useState<boolean>(true)
   const [useTools, setUseTools] = useState<boolean>(true)
   const [logFile, setLogFile] = useState<string>('')

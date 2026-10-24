@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from agent.state import InvestigationState
 from agent.rag import search_documentation, get_rag_pipeline
-from agent.llm import LocalIncidentModelProvider
+from agent.llm import DiagnosticModeProvider
 from agent.tools import detect_anomalies
 from agent.agent import Investigator
 from api.main import app
@@ -70,14 +70,13 @@ def test_anomaly_detector_structured_response():
     assert "model" in data
     assert "explanation" in data
 
-def test_local_model_provider_initialization():
-    """Verify LocalIncidentModelProvider reports clean status and handles tool turns."""
-    provider = LocalIncidentModelProvider()
+def test_diagnostic_model_provider_initialization():
+    """Verify DiagnosticModeProvider reports clean status and handles tool turns."""
+    provider = DiagnosticModeProvider()
     info = provider.get_info()
-    assert info["provider"] == "local"
-    assert "base_model" in info
-    assert "adapter_loaded" in info
-    assert "status" in info
+    assert info["provider"] == "diagnostic"
+    assert "model" in info
+    assert info["status"] == "ready"
 
     # Complete a turn
     messages = [
@@ -90,7 +89,7 @@ def test_local_model_provider_initialization():
     assert "tool_calls" in res
 
 def test_end_to_end_agent_with_local_provider():
-    """Verify end-to-end agent investigation using LocalIncidentModelProvider."""
+    """Verify end-to-end agent investigation using DiagnosticModeProvider."""
     os.environ["LLM_PROVIDER"] = "local"
     os.environ["ACTIVE_INCIDENT"] = "INC-01"
 
@@ -109,22 +108,30 @@ def test_end_to_end_agent_with_local_provider():
     assert len(result["state"]["tools_used"]) > 0
 
 def test_api_v2_models_and_endpoints():
-    """Verify API endpoints: /models, /models/status, /models/anomaly/predict, /investigations."""
+    """Verify API endpoints: /models, /models/status, /models/ml-service/status, /models/anomaly/predict, /investigations."""
     client = TestClient(app)
 
     # Models list
     res = client.get("/api/models")
     assert res.status_code == 200
-    providers = res.json()["providers"]
+    data = res.json()
+    providers = data["providers"]
+    assert any(p["id"] == "gemini" for p in providers)
     assert any(p["id"] == "local" for p in providers)
+    assert "external_ml_service" in data
 
     # Models status
     res = client.get("/api/models/status")
     assert res.status_code == 200
     status_data = res.json()
     assert "active_provider" in status_data
-    assert "adapter_loaded" in status_data
     assert "hardware" in status_data
+    assert "external_ml_service" in status_data
+
+    # ML service status endpoint
+    res_ml = client.get("/api/models/ml-service/status")
+    assert res_ml.status_code == 200
+    assert "available" in res_ml.json()
 
     # Anomaly predict endpoint
     res = client.post("/api/models/anomaly/predict", json={"log_file": "data/logs/sample_app.jsonl"})

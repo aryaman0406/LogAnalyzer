@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/Badge'
-import { FileCode, FileText, GitCommit, ExternalLink, ArrowUpRight, Activity, BookOpen } from 'lucide-react'
+import { FileCode, FileText, GitCommit, ArrowUpRight, Activity, BookOpen } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { Evidence } from '@/types'
 

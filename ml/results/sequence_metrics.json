@@ -1,0 +1,16 @@
+[
+  {
+    "model": "DeepLogLSTM",
+    "precision": 0.9604130808950087,
+    "recall": 0.4418052256532066,
+    "f1": 0.6052060737527115,
+    "threshold": 0.02,
+    "top_k": 9,
+    "sessions": {
+      "train": 402542,
+      "validation": 86259,
+      "test": 86260
+    },
+    "training_normal_sessions": 390755
+  }
+]

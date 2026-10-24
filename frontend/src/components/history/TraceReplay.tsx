@@ -2,7 +2,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { TimelineEvent } from '@/components/investigate/TimelineEvent'
 import { ConfidenceMeter } from '@/components/ui/ConfidenceMeter'
 import { Button } from '@/components/ui/button'
-import { Code2, ArrowRight } from 'lucide-react'
+import { Code2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { Investigation, InvestigationReport } from '@/types'
 

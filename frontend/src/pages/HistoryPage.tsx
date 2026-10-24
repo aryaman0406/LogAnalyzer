@@ -7,7 +7,6 @@ import { TraceReplay } from '@/components/history/TraceReplay'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/Badge'
 import { History, RefreshCw, AlertCircle, Clock } from 'lucide-react'
 import type { Investigation } from '@/types'
 

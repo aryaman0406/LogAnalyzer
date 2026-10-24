@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from agent.agent import Investigator
 from agent.llm import LLMClient
-from ml.incident.config import detect_hardware
+from api.hardware import detect_hardware
 
 ROOT = Path(__file__).resolve().parents[1]
 GT_PATH = ROOT / "data" / "ground_truth.json"

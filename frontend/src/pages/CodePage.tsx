@@ -9,7 +9,7 @@ import { ApplyPatchDialog } from '@/components/code/ApplyPatchDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { FileCode, GitCompare, Search, RefreshCw, GitPullRequest, Code2 } from 'lucide-react'
+import { FileCode, GitCompare, Search, RefreshCw, Code2 } from 'lucide-react'
 
 export function CodePage() {
   const [searchParams, setSearchParams] = useSearchParams()

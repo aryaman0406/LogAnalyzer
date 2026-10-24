@@ -28,6 +28,7 @@ class InvestigationState:
     tools_used: list[str] = field(default_factory=list)
     tool_call_history: list[dict[str, Any]] = field(default_factory=list)
     anomaly_results: list[dict[str, Any]] = field(default_factory=list)
+    custom_ml_results: list[dict[str, Any]] = field(default_factory=list)
     candidate_root_causes: list[str] = field(default_factory=list)
     affected_files: list[str] = field(default_factory=list)
     affected_functions: list[str] = field(default_factory=list)
@@ -81,6 +82,23 @@ class InvestigationState:
                 reference=f"detector_{model}",
                 detail=f"Anomaly score {score:.2f} flagged by {model}: {result.get('explanation', '')}"
             )
+        self.updated_at = time.time()
+
+    def record_ml_prediction(self, prediction: dict[str, Any]) -> None:
+        """Record inference from the external custom ML model service."""
+        self.custom_ml_results.append(prediction)
+        if prediction.get("available") and not prediction.get("degraded"):
+            cat = prediction.get("predicted_category", "unknown")
+            conf = prediction.get("confidence", 0.0)
+            detail = f"Custom ML model ({prediction.get('model_version', '1.0')}) predicted: {cat} (confidence: {conf:.2f})"
+            self.add_evidence(
+                ev_type="custom_ml",
+                reference="external_ml_service",
+                detail=detail,
+                source="Custom ML Model Service"
+            )
+            for f in prediction.get("suspected_files", []):
+                self.add_hypothesis(f"Custom ML model suggests inspecting file: {f}")
         self.updated_at = time.time()
 
     def set_final_diagnosis(self, diagnosis: str, affected_files: list[str],
