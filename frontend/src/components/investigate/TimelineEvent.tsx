@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import {
   BrainCircuit,
   Wrench,
@@ -11,7 +10,6 @@ import {
   FileText,
   Copy,
   Check,
-  Sparkles,
   BookOpen,
   Activity,
 } from 'lucide-react'
@@ -36,7 +34,7 @@ export function TimelineEvent({ event, isLast = false, isActive = false }: Timel
   const isAnomaly = toolName === 'detect_anomalies'
   const isRag = toolName === 'search_docs'
 
-  const getEventCategory = (): { label: string; variant: 'default' | 'success' | 'error' | 'warn' | 'accent' | 'secondary' } => {
+  const getEventCategory = (): { label: string; variant: 'default' | 'success' | 'error' | 'warn' | 'accent' | 'secondary' | 'info' } => {
     switch (event.type) {
       case 'thought':
         return { label: 'AGENT ACTION', variant: 'accent' }
@@ -44,7 +42,7 @@ export function TimelineEvent({ event, isLast = false, isActive = false }: Timel
         return { label: 'TOOL CALL', variant: 'warn' }
       case 'tool_result':
         if (isAnomaly) return { label: 'ANOMALY RESULT', variant: 'error' }
-        if (isRag) return { label: 'RAG RETRIEVAL', variant: 'accent' }
+        if (isRag) return { label: 'RAG RETRIEVAL', variant: 'info' }
         return { label: 'EVIDENCE', variant: 'success' }
       case 'final':
         return { label: 'FINAL DIAGNOSIS', variant: 'success' }
@@ -58,36 +56,36 @@ export function TimelineEvent({ event, isLast = false, isActive = false }: Timel
   const getIcon = () => {
     switch (event.type) {
       case 'thought':
-        return <BrainCircuit className="h-3.5 w-3.5 text-accent" />
+        return <BrainCircuit className="h-4 w-4 text-accent" />
       case 'tool_call':
-        return <Wrench className="h-3.5 w-3.5 text-amber-400" />
+        return <Wrench className="h-4 w-4 text-status-warning" />
       case 'tool_result':
-        if (isAnomaly) return <Activity className="h-3.5 w-3.5 text-rose-400" />
-        if (isRag) return <BookOpen className="h-3.5 w-3.5 text-purple-400" />
-        return <Code2 className="h-3.5 w-3.5 text-emerald-400" />
+        if (isAnomaly) return <Activity className="h-4 w-4 text-status-error" />
+        if (isRag) return <BookOpen className="h-4 w-4 text-status-info" />
+        return <Code2 className="h-4 w-4 text-status-success" />
       case 'final':
-        return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+        return <CheckCircle2 className="h-4 w-4 text-status-success" />
       case 'error':
-        return <AlertCircle className="h-3.5 w-3.5 text-rose-400" />
+        return <AlertCircle className="h-4 w-4 text-status-error" />
       default:
-        return <FileText className="h-3.5 w-3.5 text-text-secondary" />
+        return <FileText className="h-4 w-4 text-text-secondary" />
     }
   }
 
   const getTitle = () => {
     switch (event.type) {
       case 'thought':
-        return 'Agent Action & Reasoning'
+        return 'Agent Reasoning'
       case 'tool_call':
-        return `Invoke Tool: ${toolName || 'Tool'}`
+        return `Tool Call: ${toolName || 'Tool'}`
       case 'tool_result':
         if (isAnomaly) return 'ML Sequence Anomaly Scoring'
-        if (isRag) return 'Technical Documentation RAG Retrieval'
-        return `Evidence Collected: ${toolName || 'Output'}`
+        if (isRag) return 'Technical Documentation RAG'
+        return `Tool Result: ${toolName || 'Output'}`
       case 'final':
-        return 'Final Root-Cause Diagnosis Synthesized'
+        return 'Final Root Cause Synthesis'
       case 'error':
-        return 'Execution Exception'
+        return 'Execution Error'
       default:
         return event.type
     }
@@ -116,23 +114,20 @@ export function TimelineEvent({ event, isLast = false, isActive = false }: Timel
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+    <div
       className={cn(
         'relative pl-7 pb-4 border-l transition-colors',
-        isActive ? 'border-accent' : 'border-border/70',
-        isLast ? 'border-transparent' : ''
+        isActive ? 'border-accent' : 'border-border',
+        isLast ? 'border-transparent pb-1' : ''
       )}
     >
       {/* Node bullet */}
       <div
         className={cn(
-          'absolute -left-[11px] top-0 flex h-6 w-6 items-center justify-center rounded-full border bg-bg-raised text-xs transition-all shadow-sm',
+          'absolute -left-[13px] top-0 flex h-6 w-6 items-center justify-center rounded-full border bg-background-raised text-sm transition-all',
           isActive
-            ? 'border-accent text-accent ring-4 ring-accent/20 scale-110 shadow-[0_0_12px_hsl(var(--accent))]'
-            : 'border-border/80 text-text-muted'
+            ? 'border-accent text-accent ring-2 ring-accent/30'
+            : 'border-border text-text-muted'
         )}
       >
         {getIcon()}
@@ -141,19 +136,19 @@ export function TimelineEvent({ event, isLast = false, isActive = false }: Timel
       {/* Card Body */}
       <div
         className={cn(
-          'rounded-xl border p-3.5 text-xs transition-all duration-200 bg-surface/40 hover:bg-surface/70 border-border/70 backdrop-blur-sm',
-          isActive && 'border-accent/40 bg-surface/80 shadow-[0_0_20px_rgba(129,140,248,0.15)]'
+          'rounded border p-3.5 text-sm transition-colors bg-surface border-border',
+          isActive && 'border-accent/60 bg-background-overlay'
         )}
       >
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-text-primary text-[12px] tracking-tight">
+        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-text-primary text-sm">
               {getTitle()}
             </span>
-            <Badge variant={getEventCategory().variant} className="text-[9px] uppercase tracking-wider font-mono px-1.5 py-0">
+            <Badge variant={getEventCategory().variant} className="uppercase font-mono">
               {getEventCategory().label}
             </Badge>
-            <span className="text-[10px] text-text-muted font-mono">
+            <span className="text-caption text-text-muted font-mono">
               Step {event.step}
             </span>
           </div>
@@ -161,40 +156,37 @@ export function TimelineEvent({ event, isLast = false, isActive = false }: Timel
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleCopy}
-              className="text-text-muted hover:text-text-primary p-1 rounded hover:bg-surface-hover transition-colors"
+              className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover"
               title="Copy payload"
+              aria-label="Copy event payload"
             >
-              {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+              {copied ? <Check className="h-3.5 w-3.5 text-status-success" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
             <button
               onClick={() => setExpanded(!expanded)}
-              className="text-text-muted hover:text-text-primary px-1.5 py-0.5 rounded hover:bg-surface-hover transition-colors flex items-center gap-1 text-[10px] font-mono"
+              className="px-2 py-0.5 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover flex items-center gap-1 text-caption font-mono border border-border"
+              aria-label={expanded ? 'Collapse raw payload' : 'Expand raw payload'}
             >
-              <span>{expanded ? 'Hide' : 'RAW'}</span>
-              {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              <span>{expanded ? 'Hide RAW' : 'View RAW'}</span>
+              {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>
 
         {/* Content snippet */}
-        <p className="text-text-secondary text-[11px] leading-relaxed line-clamp-3 font-normal whitespace-pre-wrap font-mono bg-bg-base/40 p-2 rounded-lg border border-border/40">
+        <p className="text-text-secondary text-sm leading-relaxed font-mono bg-background p-2.5 rounded border border-border overflow-x-auto whitespace-pre-wrap">
           {summaryText}
         </p>
 
         {/* Expanded RAW JSON */}
         {expanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-2.5 pt-2 border-t border-border/60"
-          >
-            <pre className="font-mono text-[10px] text-text-muted/90 bg-black/60 p-3 rounded-lg overflow-x-auto max-h-56 leading-relaxed border border-border/40">
+          <div className="mt-2.5 pt-2 border-t border-border">
+            <pre className="font-mono text-caption text-text-secondary bg-background p-3 rounded overflow-x-auto max-h-56 leading-relaxed border border-border">
               {contentText}
             </pre>
-          </motion.div>
+          </div>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }
