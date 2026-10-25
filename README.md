@@ -248,12 +248,67 @@ cd frontend
 npm install
 npm run dev
 ```
-Open **`http://127.0.0.1:5173`** in your browser to investigate incidents, review live reasoning traces, and inspect grounded citations.
+Open **`http://127.0.0.1:5173`** in your browser.
 
 ---
 
-## 8. Attribution & Licensing
+## 8. Redesigned Frontend Incident Console
+
+The frontend provides a calm, high-density incident investigation console designed for SREs and developers (inspired by Linear and Sentry):
+
+- **Self-Hosted Typography:** Inter for clean UI hierarchy and JetBrains Mono with tabular numbers for log lines, line numbers, and metric scores.
+- **Accessible WCAG AA Contrast:** Calibrated text contrast (at least 4.5:1 for body and secondary text) in both dark and light modes.
+- **Investigation Studio:** Clear target selection (incident presets or drag-and-drop log upload / paste with line count and file size), live step skeletons with elapsed timing, and verified diagnostic reports.
+- **Evidence & ML Ranking:** Interactive ML suspect lines table with confidence bars, line expansion, cited line highlighting, and calm status banners.
+- **Trace Replay & Audit History:** Searchable incident history table and mobile-friendly incident cards with full vertical timeline replay.
+
+### Screenshots
+
+#### Investigation Console (Desktop 1440px — Dark Theme)
+![Investigate Console Dark](docs/screenshots/after/investigate_form_1440_dark.png)
+
+#### Diagnosis Report & ML Ranking (Desktop 1440px — Dark Theme)
+![Diagnosis Report Dark](docs/screenshots/after/report_replay_1440_dark.png)
+
+#### Diagnosis Report & ML Ranking (Desktop 1440px — Light Theme)
+![Diagnosis Report Light](docs/screenshots/after/report_replay_1440_light.png)
+
+#### Audit History Table (Desktop 1440px — Dark Theme)
+![Audit History Dark](docs/screenshots/after/history_page_1440_dark.png)
+
+#### Mobile Responsive Views (390px — Mobile Navigation & Inspection)
+![Mobile Report Dark](docs/screenshots/after/report_replay_390_dark.png)
+
+---
+
+## 9. Obtaining Git-Ignored Models & Datasets
+
+For security and repository hygiene, trained model weights, large datasets, and SQLite runtime databases are excluded from Git (`.gitignore`). To set up or re-train them:
+
+### 1. Documentation RAG Index
+Build the local FAISS index from the markdown runbooks in `data/runbooks`:
+```powershell
+python -c "from agent.rag import get_rag_pipeline; n = get_rag_pipeline().build_index(); print(f'Indexed {n} documentation chunks.')"
+```
+
+### 2. Anomaly Detection Models
+The Drain3 and Random Forest model checkpoints can be trained or downloaded using the training script:
+```powershell
+python -m ml.train_hdfs_rf
+```
+This generates `ml/models/hdfs_rf.joblib` and `ml/models/drain3_state.bin`.
+
+### 3. LogHub Benchmarks (HDFS 2k)
+The benchmark datasets can be retrieved from [LogPAI LogHub](https://github.com/logpai/loghub/tree/master/HDFS):
+```powershell
+python -m ml.download_loghub
+```
+
+---
+
+## 10. Attribution & Licensing
 
 - **HDFS Dataset:** Log analysis benchmarks adapt data from [LogHub](https://github.com/logpai/loghub) ([HDFS 2k log dataset](https://github.com/logpai/loghub/tree/master/HDFS)).
 - **Drain3:** Online log template mining powered by [Drain3](https://github.com/logpai/Drain3) by LogPAI.
 - **License:** Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+
