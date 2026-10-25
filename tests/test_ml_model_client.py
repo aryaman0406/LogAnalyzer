@@ -1,134 +1,107 @@
-"""Tests for external Custom ML Model Client, health checks, retries, and degraded mode."""
-from __future__ import annotations
-import json
+import asyncio
+
 import httpx
 import pytest
 
-from api.services.ml_model_client import MLModelClient, MLPredictionResult
-from agent.tools import predict_custom_ml
-from agent.state import InvestigationState
+import api.services.ml_model_client as m
 
-def test_client_unconfigured_graceful_degradation():
-    """Verify that when ML_MODEL_API_URL is unset, client operates cleanly in degraded mode."""
-    client = MLModelClient(base_url="")
-    assert not client.is_configured
+OK = {"schema_version": "1.0", "model_version": "1.0.0", "n_lines": 3, "n_content_lines": 3,
+      "travis_fold_markers": 1, "warnings": [],
+      "top_lines": [{"line_no": 2, "score": 0.9, "section": "script", "text": "Error: boom"}]}
 
-    health = client.check_health()
-    assert health["available"] is False
-    assert health["status"] == "NOT_CONFIGURED"
 
-    pred = client.predict(log_entries=[{"message": "error occurred"}])
-    assert pred.available is False
-    assert pred.degraded is True
-    assert "not configured" in pred.error_message.lower()
+def client(handler, **kw):
+    kw.setdefault("max_retries", 2)
+    c = m.MlModelClient(base_url="http://svc", api_key="k", transport=httpx.MockTransport(handler), **kw)
+    return c
 
-def test_client_successful_prediction_mock(monkeypatch):
-    """Verify that a successful 200 response parses all fields into MLPredictionResult."""
-    mock_payload = {
-        "model_version": "1.2.0",
-        "predicted_category": "pagination_boundary_error",
-        "confidence": 0.96,
-        "suspected_files": ["sample_app/incidents.py"],
-        "suspected_functions": ["paginate"],
-        "severity": "high",
-        "anomaly_score": 0.89,
-        "features_extracted": {"error_count": 5}
-    }
 
-    def mock_post(self, url, **kwargs):
-        req = httpx.Request("POST", url)
-        return httpx.Response(status_code=200, json=mock_payload, request=req)
+@pytest.fixture(autouse=True)
+def no_sleep(monkeypatch):
+    async def fast(_): return None
+    monkeypatch.setattr(m.asyncio, "sleep", fast)
 
-    monkeypatch.setattr(httpx.Client, "post", mock_post)
 
-    client = MLModelClient(base_url="https://mock-ml-service.onrender.com")
-    res = client.predict(
-        log_entries=[{"message": "IndexError: list index out of range"}],
-        incident_id="INC-07"
-    )
+def run(coro):
+    return asyncio.run(coro)
 
-    assert res.available is True
-    assert res.degraded is False
-    assert res.model_version == "1.2.0"
-    assert res.predicted_category == "pagination_boundary_error"
-    assert res.confidence == 0.96
-    assert "sample_app/incidents.py" in res.suspected_files
-    assert "paginate" in res.suspected_functions
 
-def test_client_http_500_failure_handling(monkeypatch):
-    """Verify that an HTTP 500 error from the model service triggers retries and returns degraded result."""
-    call_count = 0
+def test_success_and_header():
+    seen = {}
+    def h(req):
+        seen["key"] = req.headers.get("x-api-key")
+        return httpx.Response(200, json=OK)
+    r = run(client(h).predict("log"))
+    assert r.available and r.top_lines[0]["line_no"] == 2 and seen["key"] == "k"
+    assert "not proof" in r.as_prompt_block()
 
-    def mock_post(self, url, **kwargs):
-        nonlocal call_count
-        call_count += 1
-        req = httpx.Request("POST", url)
-        return httpx.Response(status_code=500, json={"detail": "Inference failed"}, request=req)
 
-    monkeypatch.setattr(httpx.Client, "post", mock_post)
+def test_not_configured():
+    r = run(m.MlModelClient(base_url="").predict("log"))
+    assert not r.available and "not configured" in r.reason
+    assert "UNAVAILABLE" in r.as_prompt_block()
 
-    client = MLModelClient(base_url="https://mock-ml-service.onrender.com", max_retries=1)
-    res = client.predict(log_entries=[{"message": "some log line"}])
 
-    assert res.available is False
-    assert res.degraded is True
-    assert "error" in res.error_message.lower()
-    assert call_count >= 1
+def test_retry_on_503_then_ok():
+    calls = []
+    def h(req):
+        calls.append(1)
+        return httpx.Response(503) if len(calls) < 3 else httpx.Response(200, json=OK)
+    assert run(client(h).predict("log")).available and len(calls) == 3
 
-def test_client_timeout_handling(monkeypatch):
-    """Verify timeout exception triggers degraded mode without crashing."""
-    def mock_post(self, url, **kwargs):
-        raise httpx.TimeoutException("Read timed out")
 
-    monkeypatch.setattr(httpx.Client, "post", mock_post)
+def test_gives_up_after_retries():
+    calls = []
+    def h(req):
+        calls.append(1); return httpx.Response(503)
+    r = run(client(h).predict("log"))
+    assert not r.available and len(calls) == 3
 
-    client = MLModelClient(base_url="https://mock-ml-service.onrender.com", timeout=1.0)
-    res = client.predict(log_entries=[{"message": "some log"}])
 
-    assert res.available is False
-    assert res.degraded is True
-    assert "timed out" in res.error_message.lower()
+def test_no_retry_on_401_and_422():
+    for code in (401, 422):
+        calls = []
+        def h(req, code=code):
+            calls.append(1); return httpx.Response(code)
+        r = run(client(h).predict("log"))
+        assert not r.available and len(calls) == 1
 
-def test_client_malformed_json_handling(monkeypatch):
-    """Verify malformed JSON response is handled safely without crashing."""
-    def mock_post(self, url, **kwargs):
-        req = httpx.Request("POST", url)
-        return httpx.Response(status_code=200, text="not-valid-json", request=req)
 
-    monkeypatch.setattr(httpx.Client, "post", mock_post)
+def test_timeout_is_handled():
+    def h(req): raise httpx.ReadTimeout("slow")
+    r = run(client(h, max_retries=1).predict("log"))
+    assert not r.available and "unreachable" in r.reason
 
-    client = MLModelClient(base_url="https://mock-ml-service.onrender.com")
-    res = client.predict(log_entries=[{"message": "log"}])
 
-    assert res.available is False
-    assert res.degraded is True
-    assert "malformed json" in res.error_message.lower()
+def test_bad_schema_and_garbage():
+    assert not run(client(lambda r: httpx.Response(200, json={**OK, "schema_version": "2.0"})).predict("l")).available
+    assert not run(client(lambda r: httpx.Response(200, text="<html>")).predict("l")).available
+    assert not run(client(lambda r: httpx.Response(200, json={"schema_version": "1.0"})).predict("l")).available
 
-def test_predict_custom_ml_tool_unconfigured(monkeypatch):
-    """Verify predict_custom_ml diagnostic tool reports degraded state when unconfigured."""
-    monkeypatch.delenv("ML_MODEL_API_URL", raising=False)
-    # Reset singleton to pick up environment
-    import api.services.ml_model_client as client_mod
-    client_mod._CLIENT_INSTANCE = None
 
-    tool_output = predict_custom_ml("data/logs/sample_app.jsonl")
-    data = json.loads(tool_output)
-    assert data["available"] is False
-    assert data["degraded"] is True
+def test_cache_avoids_duplicate_calls():
+    calls = []
+    def h(req):
+        calls.append(1); return httpx.Response(200, json=OK)
+    c = client(h)
+    run(c.predict("same")); run(c.predict("same"))
+    assert len(calls) == 1
 
-def test_state_machine_records_custom_ml():
-    """Verify InvestigationState properly records external ML predictions as evidence."""
-    state = InvestigationState(incident_id="INC-07")
-    mock_prediction = {
-        "available": True,
-        "degraded": False,
-        "model_version": "1.0.0",
-        "predicted_category": "pagination_boundary_error",
-        "confidence": 0.95,
-        "suspected_files": ["sample_app/incidents.py"]
-    }
-    state.record_ml_prediction(mock_prediction)
 
-    assert len(state.custom_ml_results) == 1
-    assert any(e["type"] == "custom_ml" for e in state.evidence)
-    assert any("sample_app/incidents.py" in h for h in state.hypotheses)
+def test_too_large_and_empty_not_sent():
+    calls = []
+    def h(req):
+        calls.append(1); return httpx.Response(200, json=OK)
+    c = client(h, max_log_chars=5)
+    assert not run(c.predict("123456")).available and not run(c.predict("  ")).available and not calls
+
+
+def test_reason_never_contains_log_text():
+    r = run(client(lambda req: httpx.Response(500)).predict("SECRET-LOG-TEXT", ))
+    assert "SECRET" not in r.reason
+
+
+def test_warm_up():
+    assert run(client(lambda r: httpx.Response(200, json={"status": "ok"})).warm_up())
+    def boom(req): raise httpx.ConnectError("x")
+    assert not run(client(boom).warm_up())

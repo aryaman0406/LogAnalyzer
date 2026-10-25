@@ -1,8 +1,10 @@
 """Provider adapter for Google Gemini and offline diagnostic mode."""
 from __future__ import annotations
-import json, os
+import json, logging, os
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -57,7 +59,8 @@ class DiagnosticModeProvider:
         target_fn = "paginate" if "INC-07" in active_incident else "order_failure"
         diagnosis = {
             "root_cause": f"Observed failure matching incident signature for {active_incident or 'production service'}.",
-            "confidence": 0.92,
+            "confidence": None,
+            "confidence_basis": "offline fallback, no calibrated confidence",
             "evidence": [
                 {"type": "log", "reference": "sample_app.jsonl", "detail": "Log error occurrences verified"},
                 {"type": "code", "reference": target_file, "detail": f"Inspected function {target_fn}"}
@@ -77,16 +80,31 @@ class LLMClient:
         default_provider = "gemini" if os.getenv("GEMINI_API_KEY") else "diagnostic"
         self.provider = (provider or os.getenv("LLM_PROVIDER", default_provider)).lower()
         self.model = model or os.getenv("LLM_MODEL", "")
+        self.llm_fallback: dict[str, Any] = {"used": False, "reason": None}
 
         if self.provider in {"gemini", "google"}:
             if not os.getenv("GEMINI_API_KEY"):
-                raise RuntimeError("GEMINI_API_KEY is not configured in environment")
-            from google import genai
-            self.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-            self.model = self.model or "gemini-2.0-flash"
+                logger.warning("GEMINI_API_KEY not configured. Falling back to offline diagnostic provider.")
+                self.provider = "offline"
+                self.client = DiagnosticModeProvider(model_name="diagnostic-engine (offline fallback)")
+                self.model = self.client.model_name
+                self.llm_fallback = {"used": True, "reason": "Gemini unavailable (GEMINI_API_KEY not configured)"}
+            else:
+                try:
+                    from google import genai
+                    self.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+                    self.model = self.model or "gemini-3.5-flash-lite"
+                except Exception as exc:
+                    logger.warning("Failed to initialize Gemini client (%s). Falling back to offline diagnostic provider.", type(exc).__name__)
+                    self.provider = "offline"
+                    self.client = DiagnosticModeProvider(model_name="diagnostic-engine (offline fallback)")
+                    self.model = self.client.model_name
+                    self.llm_fallback = {"used": True, "reason": f"Gemini unavailable ({type(exc).__name__})"}
         elif self.provider in {"diagnostic", "local", "offline"}:
             self.client = DiagnosticModeProvider(model_name=self.model or "diagnostic-engine")
             self.model = self.client.model_name
+            if os.getenv("LLM_PROVIDER") in {"gemini", "google"}:
+                self.llm_fallback = {"used": True, "reason": "Gemini unavailable (offline mode configured)"}
         else:
             raise ValueError(f"Unsupported LLM provider '{self.provider}'. Only Google Gemini ('gemini') is supported.")
 
@@ -103,7 +121,10 @@ class LLMClient:
     def complete(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
         """Make one Gemini or Diagnostic tool-calling turn."""
         if self.provider in {"diagnostic", "local", "offline"}:
-            return self.client.complete(messages, tools)
+            res = self.client.complete(messages, tools)
+            if self.llm_fallback.get("used"):
+                res["llm_fallback"] = self.llm_fallback
+            return res
 
         if self.provider in {"gemini", "google"}:
             from google.genai import types
@@ -115,12 +136,48 @@ class LLMClient:
                 )
                 for x in tools
             ]
+            import time as _time
             prompt = "\n".join(f"{m['role']}: {m.get('content', '')}" for m in messages)
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=types.GenerateContentConfig(tools=[types.Tool(function_declarations=declarations)])
-            )
+            response = None
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    response = self.client.models.generate_content(
+                        model=self.model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(tools=[types.Tool(function_declarations=declarations)])
+                    )
+                    break
+                except Exception as exc:
+                    err_msg = str(exc)
+                    if ("429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg) and attempt < max_attempts - 1:
+                        wait_sec = 6.0 * (attempt + 1)
+                        logger.warning("[TIMING] Gemini rate limit reached (429/RESOURCE_EXHAUSTED). Waiting %.1fs before retry (attempt %d/%d)", wait_sec, attempt + 1, max_attempts)
+                        _time.sleep(wait_sec)
+                        continue
+                    elif "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "API key not valid" in err_msg or "INVALID_ARGUMENT" in err_msg:
+                        reason_str = "Gemini unavailable (rate limit)" if ("429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg) else "Gemini unavailable (invalid key)"
+                        logger.error("Gemini provider error (%s). Falling back to offline diagnostic provider.", reason_str)
+                        # Gracefully degrade to offline DiagnosticModeProvider
+                        self.provider = "offline"
+                        self.model = "diagnostic-engine (offline fallback)"
+                        self.llm_fallback = {"used": True, "reason": reason_str}
+                        self.client = DiagnosticModeProvider(model_name=self.model)
+                        fallback_res = self.client.complete(messages, tools)
+                        fallback_res["llm_fallback"] = self.llm_fallback
+                        fallback_res["fallback_note"] = "Gemini provider unavailable; degraded to offline diagnostic provider."
+                        return fallback_res
+                    else:
+                        reason_str = f"Gemini unavailable ({type(exc).__name__})"
+                        logger.error("Gemini provider unexpected error (%s). Falling back to offline diagnostic provider.", reason_str)
+                        self.provider = "offline"
+                        self.model = "diagnostic-engine (offline fallback)"
+                        self.llm_fallback = {"used": True, "reason": reason_str}
+                        self.client = DiagnosticModeProvider(model_name=self.model)
+                        fallback_res = self.client.complete(messages, tools)
+                        fallback_res["llm_fallback"] = self.llm_fallback
+                        fallback_res["fallback_note"] = "Gemini provider unavailable; degraded to offline diagnostic provider."
+                        return fallback_res
             calls = []
             text = ""
             for part in response.candidates[0].content.parts:
