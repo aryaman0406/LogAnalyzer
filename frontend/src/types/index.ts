@@ -31,17 +31,40 @@ export interface SSEEvent {
   content: Record<string, unknown>
 }
 
+export interface MlTopLine {
+  line_no: number
+  score: number
+  section?: string
+  text: string
+}
+
+export interface MlRankingResult {
+  available: boolean
+  model_version?: string
+  top_lines?: MlTopLine[]
+  reason?: string
+  warnings?: string[]
+}
+
+export interface LlmFallback {
+  used: boolean
+  reason?: string | null
+}
+
 export interface InvestigationReport {
   incident_id?: string
   severity?: string
   affected_service?: string
   root_cause: string
-  confidence: number
+  confidence?: number | null
+  confidence_basis?: string | null
   evidence: Evidence[]
   suggested_fix: string
   affected_file: string
   affected_function: string
   hallucination_warnings: string[]
+  ml_ranking?: MlRankingResult
+  llm_fallback?: LlmFallback
 }
 
 export interface Evidence {
@@ -60,7 +83,8 @@ export interface InvestigationState {
   affected_files: string[]
   affected_functions: string[]
   severity: string
-  confidence: number
+  confidence?: number | null
+  confidence_basis?: string | null
 }
 
 export interface Investigation {

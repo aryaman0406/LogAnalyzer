@@ -19,19 +19,19 @@ export function HistoryTable({
       case 'complete':
         return (
           <Badge variant="success" className="gap-1">
-            <CheckCircle2 className="h-3 w-3" /> Complete
+            <CheckCircle2 className="h-3.5 w-3.5" /> Complete
           </Badge>
         )
       case 'running':
         return (
-          <Badge variant="accent" className="gap-1 animate-pulse">
-            <Clock className="h-3 w-3" /> Running
+          <Badge variant="warn" className="gap-1 animate-pulse">
+            <Clock className="h-3.5 w-3.5" /> Running
           </Badge>
         )
       case 'error':
         return (
           <Badge variant="error" className="gap-1">
-            <AlertCircle className="h-3 w-3" /> Failed
+            <AlertCircle className="h-3.5 w-3.5" /> Failed
           </Badge>
         )
       default:
@@ -40,64 +40,106 @@ export function HistoryTable({
   }
 
   return (
-    <div className="border border-border rounded-md overflow-hidden bg-surface/30">
-      <table className="w-full text-left text-xs">
-        <thead className="bg-surface border-b border-border/80 text-[10px] uppercase font-semibold text-text-muted tracking-wider">
-          <tr>
-            <th className="px-4 py-2.5">ID / Created</th>
-            <th className="px-4 py-2.5">Incident Scenario</th>
-            <th className="px-4 py-2.5">Status</th>
-            <th className="px-4 py-2.5">Root Cause Summary</th>
-            <th className="px-4 py-2.5 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/50">
-          {investigations.map((inv) => {
-            const isSelected = selectedId === inv.id
-            const rootCause =
-              inv.result && 'root_cause' in inv.result
-                ? inv.result.root_cause
-                : inv.result && 'error' in inv.result
-                ? inv.result.error
-                : '—'
+    <div className="border border-border rounded overflow-hidden bg-background">
+      {/* Desktop / Tablet Table View */}
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-surface border-b border-border text-caption uppercase font-semibold text-text-muted font-mono tracking-wider">
+            <tr>
+              <th className="px-4 py-3">ID / Timestamp</th>
+              <th className="px-4 py-3">Scenario</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Root Cause Diagnosis</th>
+              <th className="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {investigations.map((inv) => {
+              const isSelected = selectedId === inv.id
+              const rootCause =
+                inv.result && 'root_cause' in inv.result
+                  ? inv.result.root_cause
+                  : inv.result && 'error' in inv.result
+                  ? inv.result.error
+                  : '—'
 
-            return (
-              <tr
-                key={inv.id}
-                onClick={() => onSelect(inv)}
-                className={`cursor-pointer transition-colors hover:bg-surface/70 ${
-                  isSelected ? 'bg-surface font-medium' : ''
-                }`}
-              >
-                <td className="px-4 py-3">
-                  <div className="font-mono text-text-primary text-[11px] font-medium">
-                    {inv.id}
-                  </div>
-                  <div className="text-[10px] text-text-muted">
-                    {formatTimestamp(inv.created_at)}
-                  </div>
-                </td>
+              return (
+                <tr
+                  key={inv.id}
+                  onClick={() => onSelect(inv)}
+                  className={`cursor-pointer transition-colors ${
+                    isSelected ? 'bg-surface font-medium' : 'hover:bg-surface/50'
+                  }`}
+                >
+                  <td className="px-4 py-3.5">
+                    <div className="font-mono text-text-primary text-sm font-semibold">
+                      {inv.id}
+                    </div>
+                    <div className="text-caption text-text-muted mt-0.5 font-mono">
+                      {formatTimestamp(inv.created_at)}
+                    </div>
+                  </td>
 
-                <td className="px-4 py-3">
-                  <span className="font-medium text-text-primary">
-                    {inv.incident_id || 'Custom Upload'}
-                  </span>
-                </td>
+                  <td className="px-4 py-3.5">
+                    <span className="font-medium text-text-primary text-sm">
+                      {inv.incident_id || 'Custom Log'}
+                    </span>
+                  </td>
 
-                <td className="px-4 py-3">{getStatusBadge(inv.status)}</td>
+                  <td className="px-4 py-3.5">{getStatusBadge(inv.status)}</td>
 
-                <td className="px-4 py-3 max-w-xs truncate text-text-secondary">
-                  {rootCause}
-                </td>
+                  <td className="px-4 py-3.5 max-w-sm truncate text-text-secondary text-sm">
+                    {rootCause}
+                  </td>
 
-                <td className="px-4 py-3 text-right text-text-muted">
-                  <ChevronRight className="h-4 w-4 inline-block opacity-60" />
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+                  <td className="px-4 py-3.5 text-right text-text-muted">
+                    <ChevronRight className="h-4 w-4 inline-block opacity-70" />
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile 390px Card List View */}
+      <div className="sm:hidden divide-y divide-border">
+        {investigations.map((inv) => {
+          const isSelected = selectedId === inv.id
+          const rootCause =
+            inv.result && 'root_cause' in inv.result
+              ? inv.result.root_cause
+              : inv.result && 'error' in inv.result
+              ? inv.result.error
+              : '—'
+
+          return (
+            <div
+              key={inv.id}
+              onClick={() => onSelect(inv)}
+              className={`p-4 space-y-2 cursor-pointer transition-colors ${
+                isSelected ? 'bg-surface font-medium' : 'hover:bg-surface/50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-sm font-semibold text-text-primary">
+                  {inv.id}
+                </span>
+                {getStatusBadge(inv.status)}
+              </div>
+
+              <div className="flex items-center justify-between text-caption font-mono text-text-muted">
+                <span>{inv.incident_id || 'Custom Log'}</span>
+                <span>{formatTimestamp(inv.created_at)}</span>
+              </div>
+
+              <p className="text-sm text-text-secondary line-clamp-2">
+                {rootCause}
+              </p>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

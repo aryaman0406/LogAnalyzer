@@ -25,77 +25,78 @@ export function InvestigationControls({
   disabled = false,
 }: InvestigationControlsProps) {
   return (
-    <div className="space-y-3.5 pt-3 border-t border-border/60">
-      <div className="text-[11px] font-mono font-semibold tracking-wider text-text-muted uppercase">
-        Autonomous Capabilities & Engine
+    <div className="space-y-4 pt-4 border-t border-border">
+      <div className="text-caption font-mono font-semibold tracking-wider text-text-muted uppercase">
+        Engine Configuration
       </div>
 
       {/* Model Selection */}
       <div className="space-y-1.5">
-        <label className="text-[10px] font-mono uppercase text-text-muted flex items-center justify-between">
+        <label className="text-caption font-mono uppercase text-text-muted flex items-center justify-between">
           <span className="flex items-center gap-1.5">
-            <Bot className="h-3 w-3 text-accent" />
-            <span>Inference Model Engine</span>
+            <Bot className="h-3.5 w-3.5 text-accent" />
+            <span>LLM Provider</span>
           </span>
-          <span className="text-[9px] text-emerald-400 flex items-center gap-1">
-            <CheckCircle2 className="h-2.5 w-2.5" /> Ready
+          <span className="text-caption text-status-success flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" /> Ready
           </span>
         </label>
         <select
           value={provider}
           onChange={(e) => setProvider(e.target.value)}
           disabled={disabled}
-          className="w-full rounded-xl border border-border bg-surface/60 px-3 py-2 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-accent font-mono disabled:opacity-50 transition-all cursor-pointer"
+          className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent font-mono disabled:opacity-50 transition-colors cursor-pointer"
         >
           <option value="gemini">Google Gemini 2.0 Flash (Recommended)</option>
           <option value="openai">OpenAI (gpt-4o-mini)</option>
           <option value="anthropic">Anthropic (claude-3-5-haiku)</option>
-          <option value="local">Diagnostic Engine (Offline Safe Mode)</option>
+          <option value="local">Diagnostic Engine (Offline Safe Fallback)</option>
         </select>
       </div>
 
-      <div className="space-y-2 bg-surface/30 p-3 rounded-xl border border-border/60">
+      <div className="space-y-3 bg-surface p-3.5 rounded border border-border">
         <Toggle
           checked={useAnomalyDetector}
           onChange={setUseAnomalyDetector}
           disabled={disabled}
           label={
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary">
-              <Sparkles className="h-3.5 w-3.5 text-accent" />
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <Sparkles className="h-4 w-4 text-accent" />
               <span>Drain3 Anomaly Filter</span>
             </div>
           }
-          description="Pre-filters cluster logs with Drain3 template clustering & LSTM"
+          description="Pre-filters cluster logs with Drain3 template clustering"
         />
 
-        <div className="h-px bg-border/40 my-1" />
+        <div className="h-px bg-border my-1" />
 
         <Toggle
           checked={useTools}
           onChange={setUseTools}
           disabled={disabled}
           label={
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary">
-              <Wrench className="h-3.5 w-3.5 text-amber-400" />
-              <span>Diagnostic Tool Calling</span>
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <Wrench className="h-4 w-4 text-status-warning" />
+              <span>Autonomous Diagnostics</span>
             </div>
           }
-          description="Permits read-only AST lookups, log grep, git diff, and RAG retrieval"
+          description="Permits read-only AST lookups, log grep, and git diff"
         />
       </div>
 
-      <div className="space-y-1.5 pt-1">
-        <label className="text-[10px] font-mono uppercase text-text-muted flex items-center justify-between">
+      {/* Target Log File */}
+      <div className="space-y-1.5">
+        <label className="text-caption font-mono uppercase text-text-muted flex items-center justify-between">
           <span>Target Log File</span>
-          <FileSearch className="h-3 w-3 text-text-muted" />
+          <FileSearch className="h-3.5 w-3.5 text-text-muted" />
         </label>
         <input
           type="text"
           value={logFile}
           onChange={(e) => setLogFile(e.target.value)}
           disabled={disabled}
-          placeholder="Default: data/logs/sample_app.jsonl"
-          className="w-full rounded-xl border border-border bg-surface/60 px-3 py-2 text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:ring-1 focus:ring-accent font-mono disabled:opacity-50 transition-all"
+          placeholder="e.g. data/logs/real_log_1.txt"
+          className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent font-mono disabled:opacity-50 transition-colors"
         />
       </div>
     </div>
