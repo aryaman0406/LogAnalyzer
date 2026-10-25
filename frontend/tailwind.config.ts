@@ -29,82 +29,66 @@ const config: Config = {
           DEFAULT: 'hsl(var(--accent))',
           hover: 'hsl(var(--accent-hover))',
           muted: 'hsl(var(--accent-muted))',
+          subtle: 'hsl(var(--accent-subtle))',
         },
-        error: 'hsl(var(--error))',
-        warn: 'hsl(var(--warn))',
-        success: 'hsl(var(--success))',
+        status: {
+          success: 'hsl(var(--status-success))',
+          'success-bg': 'hsl(var(--status-success-bg))',
+          'success-border': 'hsl(var(--status-success-border))',
+          warning: 'hsl(var(--status-warning))',
+          'warning-bg': 'hsl(var(--status-warning-bg))',
+          'warning-border': 'hsl(var(--status-warning-border))',
+          error: 'hsl(var(--status-error))',
+          'error-bg': 'hsl(var(--status-error-bg))',
+          'error-border': 'hsl(var(--status-error-border))',
+          info: 'hsl(var(--status-info))',
+          'info-bg': 'hsl(var(--status-info-bg))',
+          'info-border': 'hsl(var(--status-info-border))',
+        },
+        error: 'hsl(var(--status-error))',
+        warn: 'hsl(var(--status-warning))',
+        success: 'hsl(var(--status-success))',
       },
       fontFamily: {
-        sans: ['Inter Variable', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       fontSize: {
-        'xs': ['0.6875rem', { lineHeight: '1rem' }],
-        'sm': ['0.75rem', { lineHeight: '1.125rem' }],
-        'base': ['0.8125rem', { lineHeight: '1.25rem' }],
-        'lg': ['0.9375rem', { lineHeight: '1.375rem' }],
-        'xl': ['1.125rem', { lineHeight: '1.625rem' }],
-        '2xl': ['1.5rem', { lineHeight: '2rem' }],
-        '3xl': ['2.25rem', { lineHeight: '2.75rem' }],
-        'hero': ['3.5rem', { lineHeight: '3.75rem' }],
+        // Enforce Phase 1 Design Direction: Nothing below 12px. Primary reading text 16px.
+        'caption': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.01em' }], // 12px min
+        'xs': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.01em' }], // 12px
+        'sm': ['0.875rem', { lineHeight: '1.25rem' }], // 14px (secondary, log, code)
+        'base': ['1rem', { lineHeight: '1.5rem' }], // 16px (body reading text)
+        'card-title': ['1.0625rem', { lineHeight: '1.5rem', fontWeight: '600' }], // 17px
+        'lg': ['1.125rem', { lineHeight: '1.625rem' }], // 18px
+        'xl': ['1.25rem', { lineHeight: '1.75rem' }], // 20px
+        'section': ['1.375rem', { lineHeight: '1.875rem', fontWeight: '600' }], // 22px
+        '2xl': ['1.5rem', { lineHeight: '2rem' }], // 24px
+        'page-title': ['1.875rem', { lineHeight: '2.25rem', fontWeight: '600' }], // 30px
+        '3xl': ['2rem', { lineHeight: '2.5rem' }],
       },
       borderRadius: {
+        DEFAULT: '8px',
         sm: '4px',
-        DEFAULT: '6px',
         md: '8px',
-        lg: '12px',
-        xl: '16px',
-        '2xl': '20px',
+        lg: '10px',
+        xl: '12px',
+        full: '9999px',
       },
       boxShadow: {
-        sm: '0 1px 2px hsl(0 0% 0% / 0.15)',
-        DEFAULT: '0 2px 8px hsl(0 0% 0% / 0.2)',
-        lg: '0 4px 16px hsl(0 0% 0% / 0.25)',
-        glow: '0 0 20px hsl(var(--accent) / 0.15)',
-        'glow-strong': '0 0 30px hsl(var(--accent) / 0.25)',
-        card: '0 1px 3px hsl(0 0% 0% / 0.1), 0 0 0 1px hsl(var(--border))',
+        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        DEFAULT: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+        md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+        lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+        focus: '0 0 0 2px hsl(var(--bg-base)), 0 0 0 4px hsl(var(--accent))',
       },
       transitionDuration: {
-        fast: '100ms',
+        fast: '150ms',
         DEFAULT: '200ms',
-        slow: '400ms',
-        spring: '500ms',
+        slow: '250ms',
       },
       transitionTimingFunction: {
-        spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-      },
-      keyframes: {
-        'fade-in': {
-          from: { opacity: '0', transform: 'translateY(4px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
-        'fade-up': {
-          from: { opacity: '0', transform: 'translateY(12px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
-        'slide-in-left': {
-          from: { opacity: '0', transform: 'translateX(-8px)' },
-          to: { opacity: '1', transform: 'translateX(0)' },
-        },
-        'pulse-glow': {
-          '0%, 100%': { boxShadow: '0 0 12px hsl(var(--accent) / 0.15)' },
-          '50%': { boxShadow: '0 0 24px hsl(var(--accent) / 0.3)' },
-        },
-        spin: {
-          to: { transform: 'rotate(360deg)' },
-        },
-        'skeleton-shimmer': {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
-      },
-      animation: {
-        'fade-in': 'fade-in 0.3s ease-out',
-        'fade-up': 'fade-up 0.4s ease-out',
-        'slide-in-left': 'slide-in-left 0.3s ease-out',
-        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
-        spin: 'spin 1s linear infinite',
-        'skeleton-shimmer': 'skeleton-shimmer 1.5s ease-in-out infinite',
+        DEFAULT: 'cubic-bezier(0, 0, 0.2, 1)',
       },
     },
   },
