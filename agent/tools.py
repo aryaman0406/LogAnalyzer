@@ -1,6 +1,6 @@
 """Validated, bounded, read-only-by-default investigation tools."""
 from __future__ import annotations
-import json, re, shlex, subprocess
+import json, os, re, shlex, subprocess
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +8,47 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_CHARS = 3000
+
+# Directories and files excluded from code search to keep response times fast and focus on real source
+EXCLUDED_DIR_NAMES = {
+    ".git", ".venv", "venv", "node_modules", "__pycache__",
+    "dist", "build", ".pytest_cache", "data"
+}
+
+# Non-source and binary extensions to skip in search_code
+BINARY_OR_LARGE_EXTENSIONS = {
+    ".joblib", ".bin", ".pt", ".pth", ".npy", ".npz", ".exe", ".dll", ".so",
+    ".dylib", ".wasm", ".sqlite3", ".db", ".zip", ".tar", ".gz", ".png",
+    ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf"
+}
+
+def _is_binary_or_large(path: Path) -> bool:
+    """Return True if the file exceeds 1 MB or contains binary data."""
+    try:
+        if path.stat().st_size > 1_000_000:
+            return True
+        if path.suffix.lower() in BINARY_OR_LARGE_EXTENSIONS:
+            return True
+        with path.open("rb") as f:
+            chunk = f.read(1024)
+            if b"\x00" in chunk:
+                return True
+    except OSError:
+        return True
+    return False
+
+# Execution context for investigation-level caching (e.g. precomputed ML result)
+# Uses contextvars.ContextVar so concurrent investigations in different async tasks / threads remain isolated
+import contextvars
+_CURRENT_ML_RESULT: contextvars.ContextVar[Any | None] = contextvars.ContextVar("_CURRENT_ML_RESULT", default=None)
+
+def set_current_ml_result(ml_result: Any | None) -> contextvars.Token:
+    """Store the precomputed MlResult in the current context."""
+    return _CURRENT_ML_RESULT.set(ml_result)
+
+def get_current_ml_result() -> Any | None:
+    """Retrieve the precomputed MlResult for the current context."""
+    return _CURRENT_ML_RESULT.get()
 
 TOOL_SCHEMAS = [
  {"type":"function","function":{"name":"read_logs","description":"Read bounded structured log lines with optional filters.","parameters":{"type":"object","properties":{"file":{"type":"string"},"start_time":{"type":"string"},"end_time":{"type":"string"},"level":{"type":"string"},"limit":{"type":"integer"}},"required":["file"]}}},
@@ -66,14 +107,24 @@ def log_stats(file: str, bucket_minutes: int = 5) -> str:
     return _clip(json.dumps({k:dict(v) for k,v in sorted(buckets.items())},indent=2))
 
 def search_code(query: str) -> str:
-    terms=query.casefold().split(); hits=[]
-    for path in ROOT.rglob("*"):
-        if not path.is_file() or any(p in {".git","node_modules",".venv","__pycache__"} for p in path.parts): continue
-        try: lines=path.read_text(encoding="utf-8").splitlines()
-        except (UnicodeDecodeError,OSError): continue
-        for n,line in enumerate(lines,1):
-            if all(t in line.casefold() for t in terms): hits.append(f"{path.relative_to(ROOT)}:{n}: {line.strip()}")
-            if len(hits)>=50: return _clip("\n".join(hits))
+    terms = query.casefold().split()
+    hits = []
+    for root, dirs, files in os.walk(ROOT):
+        # Prune excluded directories in-place so os.walk does not descend into them
+        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIR_NAMES]
+        for file in files:
+            p = Path(root) / file
+            if _is_binary_or_large(p):
+                continue
+            try:
+                lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+            except (UnicodeDecodeError, OSError):
+                continue
+            for n, line in enumerate(lines, 1):
+                if all(t in line.casefold() for t in terms):
+                    hits.append(f"{p.relative_to(ROOT)}:{n}: {line.strip()}")
+                if len(hits) >= 50:
+                    return _clip("\n".join(hits))
     return _clip("\n".join(hits) or "No matches")
 
 def read_file(path: str, start_line: int = 1, end_line: int = 100) -> str:
@@ -81,6 +132,13 @@ def read_file(path: str, start_line: int = 1, end_line: int = 100) -> str:
     return _clip("\n".join(f"{i}: {lines[i-1]}" for i in range(start,end+1)))
 
 def git_log(since: str = "", until: str = "", path: str = "") -> str:
+    # If the currently investigated log is an external log (e.g. real_log_1.txt or outside sample_app),
+    # repo commits are completely unrelated to the external project incident.
+    active_inc = os.getenv("ACTIVE_INCIDENT", "")
+    # Check if the log is external (e.g. Travis CI real_log or not matching local codebase)
+    if not active_inc and not path:
+        # Check if caller specified a specific repo path
+        pass
     args=["git","log","--date=iso","--pretty=format:%h %ad %s","-n","40"]
     if since: args += [f"--since={since}"]
     if until: args += [f"--until={until}"]
@@ -127,13 +185,30 @@ def detect_anomalies(log_file: str) -> str:
             "explanation": "No trained anomaly detector model found at ml/models/hdfs_rf.joblib."
         }, indent=2))
     try:
+        raw_text = _path(log_file).read_text(encoding="utf-8", errors="replace")
+        import re
+        has_hdfs_blocks = bool(re.search(r"blk_-?\d+", raw_text))
+        if not has_hdfs_blocks:
+            return _clip(json.dumps({
+                "available": True,
+                "applicable": False,
+                "anomalous": False,
+                "score": 0.0,
+                "model": "random_forest",
+                "trained_on": "HDFS log block sessions (LogHub dataset)",
+                "events": [],
+                "explanation": "Not applicable: The local anomaly detector was trained on HDFS log block sessions. The analysed log does not contain HDFS block identifiers (e.g. Travis CI or web app log)."
+            }, indent=2))
+
         scored = predict_file(_path(log_file))
         if not scored:
             return _clip(json.dumps({
                 "available": True,
+                "applicable": True,
                 "anomalous": False,
                 "score": 0.0,
                 "model": "random_forest",
+                "trained_on": "HDFS log block sessions (LogHub dataset)",
                 "events": [],
                 "explanation": "No valid log sessions parsed to score."
             }, indent=2))
@@ -141,9 +216,11 @@ def detect_anomalies(log_file: str) -> str:
         anomalous = any(s.get("is_anomalous", False) for s in scored)
         return _clip(json.dumps({
             "available": True,
+            "applicable": True,
             "anomalous": anomalous,
             "score": round(float(max_score), 3),
             "model": "random_forest",
+            "trained_on": "HDFS log block sessions (LogHub dataset)",
             "events": scored[:5],
             "explanation": f"Evaluated {len(scored)} session(s); {sum(1 for s in scored if s.get('is_anomalous'))} anomalous flagged."
         }, indent=2))
@@ -157,8 +234,21 @@ def detect_anomalies(log_file: str) -> str:
             "explanation": f"Inference error: {str(exc)}"
         }, indent=2))
 
-def predict_custom_ml(log_file: str, incident_id: str = "") -> str:
-    """Invoke external Custom ML Model service to predict incident category and affected files."""
+def predict_custom_ml(log_file: str, incident_id: str = "", ml_result: Any | None = None) -> str:
+    """Invoke or retrieve external Custom ML Model service predictions for the incident."""
+    cached = ml_result if ml_result is not None else get_current_ml_result()
+    if cached is not None:
+        # Reuse precomputed ML model result from investigation initialization
+        return _clip(json.dumps({
+            "available": cached.available,
+            "degraded": not cached.available,
+            "model_version": cached.model_version,
+            "predicted_category": "ranked_log_lines",
+            "top_lines": cached.top_lines,
+            "warnings": cached.warnings,
+            "reason": cached.reason
+        }, indent=2))
+
     try:
         from api.services.ml_model_client import get_ml_model_client
         client = get_ml_model_client()
@@ -172,40 +262,33 @@ def predict_custom_ml(log_file: str, incident_id: str = "") -> str:
             }, indent=2))
 
         path = _path(log_file)
-        entries = []
-        with path.open(encoding="utf-8", errors="replace") as stream:
-            for line in stream:
-                line_str = line.strip()
-                if not line_str:
-                    continue
-                try:
-                    item = json.loads(line_str)
-                    msg = str(item.get("message", ""))
-                    msg_clean = re.sub(r"(?i)(password|token|secret|key|authorization)=['\"]?[^'\s]+", r"\1=[REDACTED]", msg)
-                    entries.append({
-                        "timestamp": item.get("timestamp", ""),
-                        "level": item.get("level", "INFO"),
-                        "message": msg_clean[:500],
-                        "source": item.get("logger", "")
-                    })
-                except json.JSONDecodeError:
-                    entries.append({"timestamp": "", "level": "UNKNOWN", "message": line_str[:500], "source": ""})
-                if len(entries) >= 100:
-                    break
+        log_text = ""
+        try:
+            log_text = path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
 
-        pred = client.predict(log_entries=entries, incident_id=incident_id)
+        import asyncio
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop and running_loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                res = pool.submit(lambda: asyncio.run(client.predict(log_text, top_k=10))).result()
+        else:
+            res = asyncio.run(client.predict(log_text, top_k=10))
+
         return _clip(json.dumps({
-            "available": pred.available,
-            "degraded": pred.degraded,
-            "model_version": pred.model_version,
-            "predicted_category": pred.predicted_category,
-            "confidence": pred.confidence,
-            "suspected_files": pred.suspected_files,
-            "suspected_functions": pred.suspected_functions,
-            "severity": pred.severity,
-            "anomaly_score": pred.anomaly_score,
-            "features_extracted": pred.features_extracted,
-            "error_message": pred.error_message
+            "available": res.available,
+            "degraded": not res.available,
+            "model_version": res.model_version,
+            "predicted_category": "ranked_log_lines",
+            "top_lines": res.top_lines,
+            "warnings": res.warnings,
+            "reason": res.reason
         }, indent=2))
     except Exception as exc:
         return _clip(json.dumps({
@@ -227,8 +310,14 @@ def run_command(cmd: str) -> str:
 
 TOOL_FUNCTIONS = {f.__name__: f for f in (read_logs,grep_logs,log_stats,search_code,read_file,git_log,git_diff,search_docs,detect_anomalies,predict_custom_ml,run_command)}
 
-def execute_tool(name: str, arguments: dict[str, Any]) -> str:
+def execute_tool(name: str, arguments: dict[str, Any], ml_result: Any | None = None) -> str:
     """Dispatch an allowlisted tool with bounded serialized output."""
     if name not in TOOL_FUNCTIONS: raise ValueError(f"unknown tool: {name}")
-    try: return _clip(str(TOOL_FUNCTIONS[name](**arguments)))
+    try:
+        if name == "predict_custom_ml":
+            args = dict(arguments)
+            if ml_result is not None and "ml_result" not in args:
+                args["ml_result"] = ml_result
+            return _clip(str(TOOL_FUNCTIONS[name](**args)))
+        return _clip(str(TOOL_FUNCTIONS[name](**arguments)))
     except Exception as exc: return _clip(json.dumps({"error":type(exc).__name__,"detail":str(exc)}))

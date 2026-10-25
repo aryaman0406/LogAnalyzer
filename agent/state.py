@@ -33,7 +33,8 @@ class InvestigationState:
     affected_files: list[str] = field(default_factory=list)
     affected_functions: list[str] = field(default_factory=list)
     severity: str = "unknown"
-    confidence: float = 0.0
+    confidence: float | None = None
+    confidence_basis: str | None = None
     final_diagnosis: str | None = None
     recommendation: str | None = None
     reasoning_summary: str | None = None
@@ -74,13 +75,18 @@ class InvestigationState:
     def record_anomaly(self, result: dict[str, Any]) -> None:
         """Record structured anomaly detector inference results."""
         self.anomaly_results.append(result)
+        trained_on = result.get("trained_on", "HDFS log block sessions (LogHub)")
+        is_applicable = result.get("applicable", True)
+        if not is_applicable:
+            # Do not record as positive anomaly evidence on non-HDFS logs
+            return
         if result.get("anomalous"):
             score = result.get("score", 0.0)
             model = result.get("model", "unknown")
             self.add_evidence(
                 ev_type="anomaly",
                 reference=f"detector_{model}",
-                detail=f"Anomaly score {score:.2f} flagged by {model}: {result.get('explanation', '')}"
+                detail=f"Anomaly score {score:.2f} flagged by {model} (trained on {trained_on}): {result.get('explanation', '')}"
             )
         self.updated_at = time.time()
 
@@ -88,9 +94,13 @@ class InvestigationState:
         """Record inference from the external custom ML model service."""
         self.custom_ml_results.append(prediction)
         if prediction.get("available") and not prediction.get("degraded"):
-            cat = prediction.get("predicted_category", "unknown")
-            conf = prediction.get("confidence", 0.0)
-            detail = f"Custom ML model ({prediction.get('model_version', '1.0')}) predicted: {cat} (confidence: {conf:.2f})"
+            top_lines = prediction.get("top_lines", [])
+            if top_lines:
+                top = top_lines[0]
+                detail = f"Custom ML suspect line {top.get('line_no')} (score: {top.get('score', 0):.3f}): '{top.get('text', '').strip()}'"
+            else:
+                cat = prediction.get("predicted_category", "ranked_log_lines")
+                detail = f"Custom ML model ({prediction.get('model_version', '1.0')}) analyzed log (category: {cat})"
             self.add_evidence(
                 ev_type="custom_ml",
                 reference="external_ml_service",
@@ -102,14 +112,16 @@ class InvestigationState:
         self.updated_at = time.time()
 
     def set_final_diagnosis(self, diagnosis: str, affected_files: list[str],
-                            affected_functions: list[str], confidence: float,
+                            affected_functions: list[str], confidence: float | None,
                             recommendation: str, severity: str = "high",
-                            reasoning_summary: str = "") -> None:
+                            reasoning_summary: str = "",
+                            confidence_basis: str | None = None) -> None:
         """Update final state diagnosis and finalize status."""
         self.final_diagnosis = diagnosis
         self.affected_files = affected_files
         self.affected_functions = affected_functions
-        self.confidence = max(0.0, min(1.0, float(confidence)))
+        self.confidence = max(0.0, min(1.0, float(confidence))) if confidence is not None else None
+        self.confidence_basis = confidence_basis
         self.recommendation = recommendation
         self.severity = severity
         self.reasoning_summary = reasoning_summary
@@ -118,7 +130,7 @@ class InvestigationState:
 
     def to_report(self) -> dict[str, Any]:
         """Convert investigation state into the standard report dictionary."""
-        return {
+        report = {
             "incident_id": self.incident_id,
             "root_cause": self.final_diagnosis or "Undetermined root cause",
             "confidence": self.confidence,
@@ -135,6 +147,9 @@ class InvestigationState:
             "reasoning": self.reasoning_summary or "Grounded tool investigation completed.",
             "hallucination_warnings": []
         }
+        if self.confidence_basis:
+            report["confidence_basis"] = self.confidence_basis
+        return report
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize complete state dictionary."""

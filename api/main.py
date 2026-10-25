@@ -3,6 +3,9 @@ from __future__ import annotations
 import asyncio, csv, json, os, sqlite3, time, uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -22,6 +25,13 @@ async def lifespan(_: FastAPI):
     global loop
     loop = asyncio.get_running_loop()
     with db(): pass
+    # Background warm_up for ML model client without blocking or failing startup
+    async def _safe_warmup():
+        try:
+            await get_ml_model_client().warm_up()
+        except Exception:
+            pass
+    asyncio.create_task(_safe_warmup())
     yield
 
 app = FastAPI(title="Incident Agent API", version="0.2.0", lifespan=lifespan)
