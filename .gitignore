@@ -8,7 +8,8 @@ dist/
 frontend/.env.local
 tmp/
 *.log
-data/logs/*.jsonl
+data/logs/*
+!data/logs/.gitkeep
 data/*.db
 data/*.sqlite*
 data/traces/*

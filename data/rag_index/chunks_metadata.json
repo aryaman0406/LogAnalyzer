@@ -137,12 +137,47 @@
   {
     "source": "README.md",
     "title": "Terminal 5: Launch React Frontend Console",
-    "content": "### Terminal 5: Launch React Frontend Console\n```powershell\ncd frontend\nnpm install\nnpm run dev\n```\nOpen **`http://127.0.0.1:5173`** in your browser to investigate incidents, review live reasoning traces, and inspect grounded citations.\n\n---"
+    "content": "### Terminal 5: Launch React Frontend Console\n```powershell\ncd frontend\nnpm install\nnpm run dev\n```\nOpen **`http://127.0.0.1:5173`** in your browser.\n\n---"
   },
   {
     "source": "README.md",
-    "title": "8. Attribution & Licensing",
-    "content": "## 8. Attribution & Licensing\n\n- **HDFS Dataset:** Log analysis benchmarks adapt data from [LogHub](https://github.com/logpai/loghub) ([HDFS 2k log dataset](https://github.com/logpai/loghub/tree/master/HDFS)).\n- **Drain3:** Online log template mining powered by [Drain3](https://github.com/logpai/Drain3) by LogPAI.\n- **License:** Distributed under the MIT License. See [LICENSE](LICENSE) for details."
+    "title": "8. Redesigned Frontend Incident Console",
+    "content": "## 8. Redesigned Frontend Incident Console\n\nThe frontend provides a calm, high-density incident investigation console designed for SREs and developers (inspired by Linear and Sentry):"
+  },
+  {
+    "source": "README.md",
+    "title": "8. Redesigned Frontend Incident Console",
+    "content": "- **Self-Hosted Typography:** Inter for clean UI hierarchy and JetBrains Mono with tabular numbers for log lines, line numbers, and metric scores.\n- **Accessible WCAG AA Contrast:** Calibrated text contrast (at least 4.5:1 for body and secondary text) in both dark and light modes.\n- **Investigation Studio:** Clear target selection (incident presets or drag-and-drop log upload / paste with line count and file size), live step skeletons with elapsed timing, and verified diagnostic reports.\n- **Evidence & ML Ranking:** Interactive ML suspect lines table with confidence bars, line expansion, cited line highlighting, and calm status banners.\n- **Trace Replay & Audit History:** Searchable incident history table and mobile-friendly incident cards with full vertical timeline replay."
+  },
+  {
+    "source": "README.md",
+    "title": "Screenshots",
+    "content": "### Screenshots\n\n#### Investigation Console (Desktop 1440px \u2014 Dark Theme)\n![Investigate Console Dark](docs/screenshots/after/investigate_form_1440_dark.png)\n\n#### Diagnosis Report & ML Ranking (Desktop 1440px \u2014 Dark Theme)\n![Diagnosis Report Dark](docs/screenshots/after/report_replay_1440_dark.png)\n\n#### Diagnosis Report & ML Ranking (Desktop 1440px \u2014 Light Theme)\n![Diagnosis Report Light](docs/screenshots/after/report_replay_1440_light.png)\n\n#### Audit History Table (Desktop 1440px \u2014 Dark Theme)\n![Audit History Dark](docs/screenshots/after/history_page_1440_dark.png)\n\n#### Mobile Responsive Views (390px \u2014 Mobile Navigation & Inspection)\n![Mobile Report Dark](docs/screenshots/after/report_replay_390_dark.png)\n\n---"
+  },
+  {
+    "source": "README.md",
+    "title": "9. Obtaining Git-Ignored Models & Datasets",
+    "content": "## 9. Obtaining Git-Ignored Models & Datasets\n\nFor security and repository hygiene, trained model weights, large datasets, and SQLite runtime databases are excluded from Git (`.gitignore`). To set up or re-train them:"
+  },
+  {
+    "source": "README.md",
+    "title": "1. Documentation RAG Index",
+    "content": "### 1. Documentation RAG Index\nBuild the local FAISS index from the markdown runbooks in `data/runbooks`:\n```powershell\npython -c \"from agent.rag import get_rag_pipeline; n = get_rag_pipeline().build_index(); print(f'Indexed {n} documentation chunks.')\"\n```"
+  },
+  {
+    "source": "README.md",
+    "title": "2. Anomaly Detection Models",
+    "content": "### 2. Anomaly Detection Models\nThe Drain3 and Random Forest model checkpoints can be trained or downloaded using the training script:\n```powershell\npython -m ml.train_hdfs_rf\n```\nThis generates `ml/models/hdfs_rf.joblib` and `ml/models/drain3_state.bin`."
+  },
+  {
+    "source": "README.md",
+    "title": "3. LogHub Benchmarks (HDFS 2k)",
+    "content": "### 3. LogHub Benchmarks (HDFS 2k)\nThe benchmark datasets can be retrieved from [LogPAI LogHub](https://github.com/logpai/loghub/tree/master/HDFS):\n```powershell\npython -m ml.download_loghub\n```\n\n---"
+  },
+  {
+    "source": "README.md",
+    "title": "10. Attribution & Licensing",
+    "content": "## 10. Attribution & Licensing\n\n- **HDFS Dataset:** Log analysis benchmarks adapt data from [LogHub](https://github.com/logpai/loghub) ([HDFS 2k log dataset](https://github.com/logpai/loghub/tree/master/HDFS)).\n- **Drain3:** Online log template mining powered by [Drain3](https://github.com/logpai/Drain3) by LogPAI.\n- **License:** Distributed under the MIT License. See [LICENSE](LICENSE) for details."
   },
   {
     "source": "sample_app\\incidents_catalog.json",
