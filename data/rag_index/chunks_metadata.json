@@ -1,183 +1,83 @@
 [
   {
     "source": "README.md",
-    "title": "Incident Agent V2: Modular AI Log Analyzer with Technical RAG, Gemini Reasoning & Independent Custom ML Inference",
-    "content": "# Incident Agent V2: Modular AI Log Analyzer with Technical RAG, Gemini Reasoning & Independent Custom ML Inference\n\n[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)\n[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)\n[![React](https://img.shields.io/badge/React-18.0+-61DAFB.svg)](https://react.dev)\n[![Gemini](https://img.shields.io/badge/Gemini_2.0_Flash-Ready-4285F4.svg)](https://ai.google.dev)\n[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)\n[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)"
+    "title": "Incident Agent V2",
+    "content": "# Incident Agent V2\n\n[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)\n[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)\n[![React](https://img.shields.io/badge/React-18.0+-61DAFB.svg)](https://react.dev)\n[![Gemini](https://img.shields.io/badge/Gemini_2.0_Flash-Ready-4285F4.svg)](https://ai.google.dev)\n[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)"
   },
   {
     "source": "README.md",
-    "title": "Incident Agent V2: Modular AI Log Analyzer with Technical RAG, Gemini Reasoning & Independent Custom ML Inference",
-    "content": "An autonomous incident investigation and log analysis platform. Incident Agent V2 decouples domain-specific machine learning inference into an independent microservice while integrating **Google Gemini 2.0 Flash** for natural-language reasoning, **FAISS vector RAG** for technical runbook retrieval, **Drain3 & Random Forest** sequence anomaly detection, and a deterministic state machine over application logs, Git commits, and source code ASTs.\n\n---"
+    "title": "Incident Agent V2",
+    "content": "An autonomous incident investigation and log analysis platform. Combines **Google Gemini 2.0 Flash** for natural-language root-cause reasoning, **FAISS vector RAG** for runbook retrieval, an **external custom ML inference service** on Render for failure pattern classification, and **Drain3 / Random Forest** sequence anomaly scoring.\n\n---"
   },
   {
     "source": "README.md",
-    "title": "1. System Architecture",
-    "content": "## 1. System Architecture\n\n```mermaid\nflowchart TD\n    subgraph TargetApp [Incident Simulation]\n        Traffic[Traffic Generator] --> App[FastAPI Sample App]\n        App --> Logs[(Structured JSONL Logs)]\n        GitRepo[(Git History)]\n        SrcCode[(Source Code AST)]\n    end\n\n    subgraph MainApp [Main Platform: Incident Agent V2]\n        Controller[Agent Controller / ReAct Loop]\n        State[Investigation State Machine]\n        Controller <--> State\n\n        subgraph ReasoningEngine [Primary Reasoning Engine]\n            Gemini[Google Gemini 2.0 Flash<br/>google.genai SDK]\n            DiagMode[Diagnostic Safe Mode<br/>Offline Fallback]\n        end\n        Controller <--> Gemini"
+    "title": "Architecture Overview",
+    "content": "## Architecture Overview\n\n```mermaid\nflowchart LR\n    Logs[Application Logs] --> Controller[Agent Controller]\n    Controller <--> Gemini[Google Gemini 2.0 Flash]\n    Controller <--> Tools[Diagnostic Tools]\n    Tools --> Git[Git History & AST]\n    Tools --> RAG[FAISS Vector RAG]\n    Tools --> ML[External ML Microservice\\non Render]\n    Tools --> Anomaly[Drain3 / RF Detector]\n    Controller --> UI[React Console]\n```"
   },
   {
     "source": "README.md",
-    "title": "1. System Architecture",
-    "content": "subgraph Tools [Allowlisted Diagnostic Tools]\n            ToolLogs[Log Search & Stats<br/>read_logs, grep_logs, log_stats]\n            ToolGit[Git Forensics<br/>git_log, git_diff]\n            ToolCode[Source Inspection<br/>search_code, read_file]\n            ToolRAG[Technical RAG<br/>search_docs via FAISS]\n            ToolAnomaly[Sequence Anomaly Detector<br/>detect_anomalies via Drain3/RF]\n            ToolExtML[External ML Client<br/>predict_custom_ml via HTTP]\n        end\n        Controller --> Tools\n    end\n\n    subgraph ExternalService [Independent Custom ML Service (Render)]\n        MLService[FastAPI ML Inference Service<br/>POST /predict | GET /health]\n        CustomWeights[(Trained Custom ML Model)]\n        MLService --> CustomWeights\n    end"
+    "title": "Core Components",
+    "content": "### Core Components\n\n- **Reasoning Engine:** Google Gemini ReAct loop with grounded AST verification, Git forensics, and offline safe mode fallback.\n- **External ML Microservice:** Independently deployed on Render (`incident-ml-service.onrender.com`) for log classification and suspect line ranking.\n- **Technical Documentation RAG:** In-memory FAISS cosine similarity index (`data/rag_index`) querying system architecture and the incident catalog.\n- **Target Simulation:** FastAPI sample e-commerce application with 8 reproducible incident modes (`INC-01` to `INC-08`).\n- **Investigation Console:** High-density React 18 / Vite / Tailwind UI with dark/light themes, live trace streaming, and timeline replay.\n\n---"
   },
   {
     "source": "README.md",
-    "title": "1. System Architecture",
-    "content": "Logs --> ToolLogs\n    GitRepo --> ToolGit\n    SrcCode --> ToolCode\n    RAGIndex[(FAISS Vector Index)] --> ToolRAG\n    DrainModel[(Drain3 / RF Model)] --> ToolAnomaly\n    ToolExtML <-->|REST API + Retries| MLService\n\n    Tools --> Evidence[(Grounded Evidence Accumulator)]\n    Evidence --> Report[Final Verified Root-Cause Diagnosis]\n    Report --> UI[Interactive React / Vite Console]\n```\n\n---"
+    "title": "Quick Start",
+    "content": "## Quick Start"
   },
   {
     "source": "README.md",
-    "title": "2. Service Separation & Responsibilities",
-    "content": "## 2. Service Separation & Responsibilities\n\nThe system is decoupled into two independent, modular services:\n\n| Component | Repository Location | Hosting / Deployment | Primary Responsibility |\n| :--- | :--- | :--- | :--- |\n| **Main Platform** | Root (`api/`, `agent/`, `frontend/`) | Local / Render / Docker | Log ingestion, AST inspections, Git commit forensics, FAISS runbook RAG, state tracking, and Gemini generative diagnosis. |\n| **Custom ML Service** | `ml_service/` | Independent Web Service (Render) | Log classification, candidate affected file/function prediction, sequence pattern inference. |"
+    "title": "1. Installation",
+    "content": "### 1. Installation\n\n```powershell\npython -m venv .venv\n.\\.venv\\Scripts\\Activate.ps1\npython -m pip install -r requirements.txt\ncd frontend && npm install && cd ..\n```"
   },
   {
     "source": "README.md",
-    "title": "How RAG, Gemini, and the Custom Model Cooperate",
-    "content": "### How RAG, Gemini, and the Custom Model Cooperate"
+    "title": "2. Environment Setup",
+    "content": "### 2. Environment Setup\n\nCreate `.env` from `.env.example`:\n```powershell\nCopy-Item .env.example .env\n```\nKey variables:\n- `GEMINI_API_KEY`: Required for Gemini natural-language reasoning.\n- `ML_MODEL_API_URL`: URL of the external ML service (`https://incident-ml-service.onrender.com`).\n- `API_PORT`: `8000` (Backend API)."
   },
   {
     "source": "README.md",
-    "title": "How RAG, Gemini, and the Custom Model Cooperate",
-    "content": "1. **Log Preprocessing:** The user or pipeline submits structured application logs. Sensitive tokens (passwords, auth headers, api keys) are automatically redacted.\n2. **Custom Model Signals:** The agent queries `predict_custom_ml`. The external model returns candidate failure categories, confidence, and suspected files. **Gemini treats these predictions as hypotheses to verify, never as final proof.**\n3. **Local Sequence Anomaly Scoring:** Retained in-process Drain3 and Random Forest classifiers score session frequency deviation against baseline traffic.\n4. **Technical Documentation RAG:** The agent queries `search_docs`, retrieving relevant runbooks and architectural catalog entries using FAISS cosine similarity.\n5. **Grounded Source & Git Verification:** The agent queries `git_log`, `git_diff`, `read_file`, and `search_code` to confirm that candidate files and functions actually exist in the repository.\n6. **Gemini Synthesis:** Google Gemini correlates the accumulated evidence, eliminates unsupported hypotheses, and emits a validated JSON diagnostic report.\n7. **Graceful Degraded Mode:** If the external ML service is unreachable or unconfigured, the agent automatically continues using native log diagnostics, AST analysis, RAG, and Gemini without interruption."
+    "title": "3. Run Locally",
+    "content": "### 3. Run Locally\n\nOpen separate terminals:\n\n```powershell"
   },
   {
     "source": "README.md",
-    "title": "How RAG, Gemini, and the Custom Model Cooperate",
-    "content": "---"
+    "title": "Terminal 1: Backend API",
+    "content": "# Terminal 1: Backend API\nuvicorn api.main:app --reload --port 8000"
   },
   {
     "source": "README.md",
-    "title": "3. External Custom ML Model API Contract",
-    "content": "## 3. External Custom ML Model API Contract\n\nThe external service exposes a versioned, stateless REST API:"
+    "title": "Terminal 2: Sample Target App",
+    "content": "# Terminal 2: Sample Target App\nuvicorn sample_app.main:app --reload --port 8001"
   },
   {
     "source": "README.md",
-    "title": "`GET /health`",
-    "content": "### `GET /health`\nReturns service availability, model version, and uptime.\n\n**Response (`200 OK`):**\n```json\n{\n  \"status\": \"healthy\",\n  \"service\": \"custom-log-ml\",\n  \"model_version\": \"1.0.0\",\n  \"uptime_seconds\": 1284.5\n}\n```"
+    "title": "Terminal 3: Frontend Console",
+    "content": "# Terminal 3: Frontend Console\ncd frontend && npm run dev\n```\n\nOpen **`http://127.0.0.1:5173`** in your browser."
   },
   {
     "source": "README.md",
-    "title": "`POST /predict` (Alias: `POST /api/v1/predict`)",
-    "content": "### `POST /predict` (Alias: `POST /api/v1/predict`)\nAccepts structured log entries and precomputed features, returning model predictions.\n\n**Request (`application/json`):**\n```json\n{\n  \"incident_id\": \"INC-07\",\n  \"log_entries\": [\n    {\n      \"timestamp\": \"2026-10-23T23:18:00Z\",\n      \"level\": \"ERROR\",\n      \"message\": \"IndexError: list index out of range in paginate\",\n      \"source\": \"sample_app.incidents\"\n    }\n  ],\n  \"features\": {\n    \"error_rate\": 0.45,\n    \"total_logs\": 100\n  }\n}\n```"
+    "title": "4. Simulate Incident Traffic",
+    "content": "### 4. Simulate Incident Traffic\n\nGenerate reproducible incident traffic against the target app:\n```powershell\npython -m sample_app.traffic --url http://127.0.0.1:8001 --incident INC-07\n```\n\n---"
   },
   {
     "source": "README.md",
-    "title": "`POST /predict` (Alias: `POST /api/v1/predict`)",
-    "content": "**Response (`200 OK`):**\n```json\n{\n  \"model_version\": \"1.0.0\",\n  \"predicted_category\": \"pagination_boundary_error\",\n  \"confidence\": 0.94,\n  \"suspected_files\": [\n    \"sample_app/incidents.py\"\n  ],\n  \"suspected_functions\": [\n    \"paginate\"\n  ],\n  \"severity\": \"high\",\n  \"anomaly_score\": 0.88,\n  \"features_extracted\": {\n    \"total_logs\": 100,\n    \"error_count\": 45,\n    \"error_rate\": 0.45\n  }\n}\n```"
+    "title": "Testing",
+    "content": "## Testing\n\nRun the automated test suite (36 unit & integration tests):\n```powershell\npython -m pytest -q\n```\n\nBuild the frontend for production:\n```powershell\ncd frontend && npm run build\n```\n\n---"
   },
   {
     "source": "README.md",
-    "title": "Authentication & Error Handling",
-    "content": "### Authentication & Error Handling\n- **Bearer Token Auth:** If `ML_SERVICE_API_KEY` is configured, requests must include `Authorization: Bearer <token>`.\n- **Transient Retries:** The main backend client (`api/services/ml_model_client.py`) automatically retries transient server errors (`502`, `503`, `504`, `ConnectionError`) up to 2 times with exponential backoff.\n- **Client Errors:** Client errors (`4xx`) fail immediately without useless retries.\n- **Privacy Safeguard:** Error logs never output raw secrets, API tokens, or unredacted production logs.\n\n---"
+    "title": "Primary API Endpoints",
+    "content": "## Primary API Endpoints\n\n| Endpoint | Method | Description |\n| :--- | :--- | :--- |\n| `/api/investigations` | `POST` | Start an autonomous incident investigation |\n| `/api/investigations/{id}` | `GET` | Get status, final diagnosis report, and grounded evidence |\n| `/api/investigations/{id}/stream` | `GET` | SSE stream of live agent thoughts and tool calls |\n| `/api/models/status` | `GET` | Health check for Gemini, RAG index, and external ML service |\n| `/api/logs` | `GET` | Tail and filter application logs |\n\n---"
   },
   {
     "source": "README.md",
-    "title": "4. Deploying the Custom ML Service to Render",
-    "content": "## 4. Deploying the Custom ML Service to Render\n\nThe `ml_service/` folder contains a standalone, production-ready containerized service:"
+    "title": "Preview",
+    "content": "## Preview\n\n![Investigation Console](docs/screenshots/after/investigate_form_1440_dark.png)\n\n---"
   },
   {
     "source": "README.md",
-    "title": "4. Deploying the Custom ML Service to Render",
-    "content": "1. **Push to Git Repository:**\n   Push your codebase or the `ml_service/` folder to GitHub or GitLab.\n2. **Create New Web Service on Render:**\n   - Go to the [Render Dashboard](https://dashboard.render.com/) and click **New > Web Service**.\n   - Connect your repository.\n   - Set **Root Directory** to `ml_service` (or point Dockerfile Path to `ml_service/Dockerfile`).\n   - Select **Docker** environment.\n   - Choose your instance type (Free or Starter).\n3. **Configure Environment Variables on Render:**\n   - `PORT=8002`\n   - `ML_SERVICE_API_KEY` (optional token for securing the endpoint)\n4. **Deploy & Copy URL:**\n   Once deployed, copy your Render URL (e.g., `https://custom-log-ml.onrender.com`).\n5. **Connect to Main Application:**\n   In your root `.env` file, set:\n   ```env\n   ML_MODEL_API_URL=https://custom-log-ml.onrender.com\n   ML_MODEL_API_KEY=your_optional_token_here\n   ```"
-  },
-  {
-    "source": "README.md",
-    "title": "4. Deploying the Custom ML Service to Render",
-    "content": "---"
-  },
-  {
-    "source": "README.md",
-    "title": "5. Environment Configuration",
-    "content": "## 5. Environment Configuration\n\nCopy `.env.example` to `.env`:\n```powershell\nCopy-Item .env.example .env\n```\n\n| Variable | Default | Purpose |\n| :--- | :--- | :--- |\n| `GEMINI_API_KEY` | *None* | Required for Google Gemini 2.0 Flash reasoning |\n| `LLM_PROVIDER` | `gemini` | Primary LLM provider (`gemini`, `openai`, `anthropic`, `local`) |\n| `ML_MODEL_API_URL` | *None* | External Custom ML service URL (leave blank for degraded mode) |\n| `ML_MODEL_API_KEY` | *None* | Bearer token for authenticating with external model service |\n| `ML_MODEL_TIMEOUT` | `5.0` | Timeout in seconds for external model calls |\n| `RAG_INDEX_DIR` | `data/rag_index` | FAISS documentation index directory |\n| `ANOMALY_MODEL_PATH` | `ml/models/hdfs_rf.joblib` | Trained Random Forest anomaly detector path |\n\n---"
-  },
-  {
-    "source": "README.md",
-    "title": "6. Quick Start & Local Execution",
-    "content": "## 6. Quick Start & Local Execution"
-  },
-  {
-    "source": "README.md",
-    "title": "1. Setup Virtual Environment",
-    "content": "### 1. Setup Virtual Environment\n```powershell\npython -m venv .venv\n.\\.venv\\Scripts\\Activate.ps1\npython -m pip install -r requirements.txt\n```"
-  },
-  {
-    "source": "README.md",
-    "title": "2. Build Documentation RAG Index",
-    "content": "### 2. Build Documentation RAG Index\n```powershell\npython -c \"from agent.rag import get_rag_pipeline; n = get_rag_pipeline().build_index(); print(f'Indexed {n} documentation chunks.')\"\n```"
-  },
-  {
-    "source": "README.md",
-    "title": "3. Run Automated Test Suite",
-    "content": "### 3. Run Automated Test Suite\n```powershell\npython -m pytest -q\n```\n\n---"
-  },
-  {
-    "source": "README.md",
-    "title": "7. End-to-End Execution Workflow",
-    "content": "## 7. End-to-End Execution Workflow"
-  },
-  {
-    "source": "README.md",
-    "title": "Terminal 1: Start Main Backend API",
-    "content": "### Terminal 1: Start Main Backend API\n```powershell\nuvicorn api.main:app --reload --port 8000\n```"
-  },
-  {
-    "source": "README.md",
-    "title": "Terminal 2: Start Sample E-Commerce Target App",
-    "content": "### Terminal 2: Start Sample E-Commerce Target App\n```powershell\nuvicorn sample_app.main:app --reload --port 8001\n```"
-  },
-  {
-    "source": "README.md",
-    "title": "Terminal 3: (Optional) Run Independent ML Service Locally",
-    "content": "### Terminal 3: (Optional) Run Independent ML Service Locally\n```powershell\nuvicorn ml_service.main:app --reload --port 8002\n```"
-  },
-  {
-    "source": "README.md",
-    "title": "Terminal 4: Simulate Incident Traffic",
-    "content": "### Terminal 4: Simulate Incident Traffic\n```powershell\npython -m sample_app.traffic --url http://127.0.0.1:8001 --incident INC-07\n```"
-  },
-  {
-    "source": "README.md",
-    "title": "Terminal 5: Launch React Frontend Console",
-    "content": "### Terminal 5: Launch React Frontend Console\n```powershell\ncd frontend\nnpm install\nnpm run dev\n```\nOpen **`http://127.0.0.1:5173`** in your browser.\n\n---"
-  },
-  {
-    "source": "README.md",
-    "title": "8. Redesigned Frontend Incident Console",
-    "content": "## 8. Redesigned Frontend Incident Console\n\nThe frontend provides a calm, high-density incident investigation console designed for SREs and developers (inspired by Linear and Sentry):"
-  },
-  {
-    "source": "README.md",
-    "title": "8. Redesigned Frontend Incident Console",
-    "content": "- **Self-Hosted Typography:** Inter for clean UI hierarchy and JetBrains Mono with tabular numbers for log lines, line numbers, and metric scores.\n- **Accessible WCAG AA Contrast:** Calibrated text contrast (at least 4.5:1 for body and secondary text) in both dark and light modes.\n- **Investigation Studio:** Clear target selection (incident presets or drag-and-drop log upload / paste with line count and file size), live step skeletons with elapsed timing, and verified diagnostic reports.\n- **Evidence & ML Ranking:** Interactive ML suspect lines table with confidence bars, line expansion, cited line highlighting, and calm status banners.\n- **Trace Replay & Audit History:** Searchable incident history table and mobile-friendly incident cards with full vertical timeline replay."
-  },
-  {
-    "source": "README.md",
-    "title": "Screenshots",
-    "content": "### Screenshots\n\n#### Investigation Console (Desktop 1440px \u2014 Dark Theme)\n![Investigate Console Dark](docs/screenshots/after/investigate_form_1440_dark.png)\n\n#### Diagnosis Report & ML Ranking (Desktop 1440px \u2014 Dark Theme)\n![Diagnosis Report Dark](docs/screenshots/after/report_replay_1440_dark.png)\n\n#### Diagnosis Report & ML Ranking (Desktop 1440px \u2014 Light Theme)\n![Diagnosis Report Light](docs/screenshots/after/report_replay_1440_light.png)\n\n#### Audit History Table (Desktop 1440px \u2014 Dark Theme)\n![Audit History Dark](docs/screenshots/after/history_page_1440_dark.png)\n\n#### Mobile Responsive Views (390px \u2014 Mobile Navigation & Inspection)\n![Mobile Report Dark](docs/screenshots/after/report_replay_390_dark.png)\n\n---"
-  },
-  {
-    "source": "README.md",
-    "title": "9. Obtaining Git-Ignored Models & Datasets",
-    "content": "## 9. Obtaining Git-Ignored Models & Datasets\n\nFor security and repository hygiene, trained model weights, large datasets, and SQLite runtime databases are excluded from Git (`.gitignore`). To set up or re-train them:"
-  },
-  {
-    "source": "README.md",
-    "title": "1. Documentation RAG Index",
-    "content": "### 1. Documentation RAG Index\nBuild the local FAISS index from the markdown runbooks in `data/runbooks`:\n```powershell\npython -c \"from agent.rag import get_rag_pipeline; n = get_rag_pipeline().build_index(); print(f'Indexed {n} documentation chunks.')\"\n```"
-  },
-  {
-    "source": "README.md",
-    "title": "2. Anomaly Detection Models",
-    "content": "### 2. Anomaly Detection Models\nThe Drain3 and Random Forest model checkpoints can be trained or downloaded using the training script:\n```powershell\npython -m ml.train_hdfs_rf\n```\nThis generates `ml/models/hdfs_rf.joblib` and `ml/models/drain3_state.bin`."
-  },
-  {
-    "source": "README.md",
-    "title": "3. LogHub Benchmarks (HDFS 2k)",
-    "content": "### 3. LogHub Benchmarks (HDFS 2k)\nThe benchmark datasets can be retrieved from [LogPAI LogHub](https://github.com/logpai/loghub/tree/master/HDFS):\n```powershell\npython -m ml.download_loghub\n```\n\n---"
-  },
-  {
-    "source": "README.md",
-    "title": "10. Attribution & Licensing",
-    "content": "## 10. Attribution & Licensing\n\n- **HDFS Dataset:** Log analysis benchmarks adapt data from [LogHub](https://github.com/logpai/loghub) ([HDFS 2k log dataset](https://github.com/logpai/loghub/tree/master/HDFS)).\n- **Drain3:** Online log template mining powered by [Drain3](https://github.com/logpai/Drain3) by LogPAI.\n- **License:** Distributed under the MIT License. See [LICENSE](LICENSE) for details."
+    "title": "License",
+    "content": "## License\n\nDistributed under the MIT License. See [LICENSE](LICENSE) for details."
   },
   {
     "source": "sample_app\\incidents_catalog.json",
