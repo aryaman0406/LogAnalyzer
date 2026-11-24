@@ -12,86 +12,73 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* ── Dark Theme (Default) - Linear / Sentry Inspired ── */
-    --bg-base: 224 20% 6%;          /* #0c0e14 */
-    --bg-raised: 224 18% 9%;        /* #131722 */
-    --bg-overlay: 224 16% 12%;      /* #1a202c */
+  :root,
+  .dark {
+    --bg-base: 222 42% 6%;          /* #090D16 */
+    --bg-raised: 221 39% 11%;       /* #111827 */
+    --bg-overlay: 217 33% 17%;      /* #1E293B */
 
-    --surface: 224 15% 14%;         /* #1f2635 */
-    --surface-hover: 224 15% 18%;   /* #283145 */
+    --surface: 221 39% 11%;
+    --surface-hover: 217 33% 17%;
+    --border: 217 33% 17%;          /* #1E293B */
+    --border-hover: 215 20% 30%;
 
-    --border: 224 12% 20%;          /* #2d3648 */
-    --border-hover: 224 14% 30%;    /* #43516c */
+    --text-primary: 210 40% 98%;    /* #F8FAFC */
+    --text-secondary: 215 20% 80%;
+    --text-muted: 215 20% 65%;      /* #94A3B8 */
 
-    /* Typography (WCAG AA Compliant contrast against dark backgrounds) */
-    --text-primary: 220 30% 98%;    /* #f8fafc - Contrast ratio > 14:1 */
-    --text-secondary: 220 15% 75%;  /* #b3bece - Contrast ratio > 7:1 */
-    --text-muted: 220 12% 62%;      /* #909bb0 - Contrast ratio > 4.6:1 (passes AA for normal text) */
+    --accent: 199 93% 60%;          /* #38BDF8 */
+    --accent-hover: 199 93% 66%;
+    --accent-muted: 199 80% 18%;
+    --accent-subtle: 199 80% 11%;
 
-    /* Accent (Developer Indigo) */
-    --accent: 238 86% 70%;          /* #818cf8 */
-    --accent-hover: 238 86% 76%;
-    --accent-muted: 238 50% 20%;
-    --accent-subtle: 238 50% 12%;
-
-    /* Semantic Status (Text, Background, Border pairs that pass WCAG AA) */
-    --status-success: 158 75% 45%;        /* #10b981 */
-    --status-success-bg: 158 75% 10%;
-    --status-success-border: 158 60% 22%;
-
-    --status-warning: 38 92% 52%;         /* #f59e0b */
-    --status-warning-bg: 38 92% 10%;
-    --status-warning-border: 38 80% 24%;
-
-    --status-error: 350 89% 62%;          /* #f43f5e */
-    --status-error-bg: 350 89% 10%;
-    --status-error-border: 350 75% 24%;
-
-    --status-info: 217 91% 65%;           /* #60a5fa */
-    --status-info-bg: 217 91% 10%;
-    --status-info-border: 217 75% 24%;
+    --status-success: 142 71% 45%;
+    --status-success-bg: 142 71% 10%;
+    --status-success-border: 142 55% 22%;
+    --status-warning: 38 92% 55%;
+    --status-warning-bg: 38 80% 11%;
+    --status-warning-border: 38 65% 25%;
+    --status-error: 0 84% 70%;
+    --status-error-bg: 0 65% 12%;
+    --status-error-border: 0 55% 26%;
+    --status-info: 199 89% 65%;
+    --status-info-bg: 199 70% 12%;
+    --status-info-border: 199 55% 26%;
 
     color-scheme: dark;
   }
 
   .light {
-    /* ── Light Theme - Polished & High-Legibility ── */
-    --bg-base: 220 20% 98%;         /* #f8fafc */
-    --bg-raised: 0 0% 100%;         /* #ffffff */
-    --bg-overlay: 220 16% 94%;      /* #edf2f7 */
+    --bg-base: 210 40% 98%;         /* #F8FAFC */
+    --bg-raised: 0 0% 100%;         /* #FFFFFF */
+    --bg-overlay: 210 40% 96%;
 
-    --surface: 220 14% 93%;         /* #e5ebf3 */
-    --surface-hover: 220 14% 88%;   /* #d6dfed */
+    --surface: 0 0% 100%;
+    --surface-hover: 210 40% 96%;
+    --border: 214 32% 91%;          /* #E2E8F0 */
+    --border-hover: 215 20% 80%;
 
-    --border: 220 13% 82%;          /* #c5d1e2 */
-    --border-hover: 220 14% 68%;    /* #a0b2cc */
+    --text-primary: 222 47% 11%;    /* #0F172A */
+    --text-secondary: 215 20% 30%;
+    --text-muted: 215 16% 47%;      /* #475569 */
 
-    /* Typography (WCAG AA Compliant) */
-    --text-primary: 224 35% 10%;    /* #0f172a - Contrast ratio > 15:1 */
-    --text-secondary: 224 20% 28%;  /* #3a475d - Contrast ratio > 7.5:1 */
-    --text-muted: 224 14% 38%;      /* #53637c - Contrast ratio > 5:1 (passes AA) */
+    --accent: 221 83% 53%;          /* #2563EB */
+    --accent-hover: 221 83% 46%;
+    --accent-muted: 221 75% 92%;
+    --accent-subtle: 221 75% 97%;
 
-    --accent: 238 84% 56%;          /* #4f46e5 */
-    --accent-hover: 238 84% 48%;
-    --accent-muted: 238 60% 92%;
-    --accent-subtle: 238 60% 96%;
-
-    --status-success: 158 84% 28%;        /* #065f46 */
-    --status-success-bg: 158 70% 94%;
-    --status-success-border: 158 50% 75%;
-
-    --status-warning: 32 95% 30%;         /* #92400e */
+    --status-success: 142 76% 30%;
+    --status-success-bg: 142 70% 94%;
+    --status-success-border: 142 48% 78%;
+    --status-warning: 32 95% 31%;
     --status-warning-bg: 38 90% 94%;
-    --status-warning-border: 38 65% 72%;
-
-    --status-error: 350 84% 38%;          /* #9f1239 */
-    --status-error-bg: 350 85% 95%;
-    --status-error-border: 350 60% 76%;
-
-    --status-info: 217 85% 38%;           /* #1e40af */
-    --status-info-bg: 217 85% 95%;
-    --status-info-border: 217 60% 76%;
+    --status-warning-border: 38 65% 76%;
+    --status-error: 0 74% 42%;
+    --status-error-bg: 0 85% 96%;
+    --status-error-border: 0 62% 82%;
+    --status-info: 221 80% 42%;
+    --status-info-bg: 221 85% 96%;
+    --status-info-border: 221 60% 82%;
 
     color-scheme: light;
   }
@@ -115,7 +102,7 @@
 
   body {
     min-height: 100vh;
-    min-width: 360px;
+    min-width: 320px;
     background-color: hsl(var(--bg-base));
     color: hsl(var(--text-primary));
     font-size: 1rem; /* 16px */
@@ -172,6 +159,14 @@
     transition: border-color 150ms ease-out, background-color 150ms ease-out;
   }
 
+  .light .surface-card {
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.05);
+  }
+
+  .dark .surface-card {
+    box-shadow: none;
+  }
+
   .surface-card-hover:hover {
     border-color: hsl(var(--border-hover));
   }
@@ -188,5 +183,15 @@
     font-size: 0.875rem; /* 14px */
     line-height: 1.5;
     font-variant-numeric: tabular-nums;
+  }
+
+  .terminal-surface {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    color: #e2e8f0;
+  }
+
+  .dark .terminal-surface {
+    background: #020617;
   }
 }

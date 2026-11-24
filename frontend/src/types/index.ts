@@ -101,10 +101,21 @@ export interface Investigation {
 export interface StartRequest {
   incident_id: string | null
   log_file?: string
+  log_content?: string
   use_anomaly_detector: boolean
   use_tools: boolean
   provider?: string
   model?: string
+}
+
+export interface ImageDiagnosis {
+  error_detected: boolean
+  summary: string
+  detected_errors: string[]
+  likely_cause: string
+  suggested_fix: string
+  extracted_text: string
+  confidence?: number | null
 }
 
 export interface ModelStatusInfo {

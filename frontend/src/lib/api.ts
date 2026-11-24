@@ -1,7 +1,7 @@
 import type {
   Incident, LogsResponse, SourceFile, Investigation,
   StartRequest, EvalResponse, ModelMetricsResponse, SSEEvent, PatchPreview,
-  ModelStatusInfo,
+  ModelStatusInfo, ImageDiagnosis,
 } from '@/types'
 
 /** API base URL from environment, never hardcoded. */
@@ -61,6 +61,40 @@ export function fetchFile(path: string, startLine = 1): Promise<SourceFile> {
 
 export function startInvestigation(req: StartRequest): Promise<{ investigation_id: string }> {
   return post('/api/investigations', req)
+}
+
+export async function analyzeImage(file: File, signal?: AbortSignal): Promise<ImageDiagnosis> {
+  const mimeByExtension: Record<string, string> = {
+    gif: 'image/gif',
+    jpeg: 'image/jpeg',
+    jpg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+  }
+  const extension = file.name.split('.').pop()?.toLowerCase() || ''
+  const mimeType = mimeByExtension[extension] || file.type || 'application/octet-stream'
+  const res = await fetch(`${API}/api/images/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': mimeType },
+    body: file,
+    signal,
+  })
+
+  if (!res.ok) {
+    const body = await res.text()
+    let message = `${res.status} ${res.statusText}`
+    if (body) {
+      try {
+        const payload = JSON.parse(body) as { detail?: string }
+        message = payload.detail || body
+      } catch {
+        message = body
+      }
+    }
+    throw new Error(message)
+  }
+
+  return res.json() as Promise<ImageDiagnosis>
 }
 
 export function fetchInvestigation(id: string): Promise<Investigation> {

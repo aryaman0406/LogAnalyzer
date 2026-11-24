@@ -8,6 +8,8 @@ interface RunButtonProps {
   onCancel: () => void
   running: boolean
   disabled?: boolean
+  actionLabel?: string
+  stopLabel?: string
 }
 
 export function RunButton({
@@ -15,6 +17,8 @@ export function RunButton({
   onCancel,
   running,
   disabled = false,
+  actionLabel = 'Run Investigation',
+  stopLabel = 'Stop Investigation',
 }: RunButtonProps) {
   useKeyboardShortcut(
     (e: KeyboardEvent) => {
@@ -40,7 +44,7 @@ export function RunButton({
       >
         <span className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Stop Investigation</span>
+          <span>{stopLabel}</span>
         </span>
         <span className="flex items-center gap-1.5 opacity-90 text-caption font-mono">
           <Square className="h-3.5 w-3.5 fill-current" />
@@ -60,7 +64,7 @@ export function RunButton({
     >
       <span className="flex items-center gap-2">
         <Play className="h-4 w-4 fill-current" />
-        <span>Run Investigation</span>
+        <span>{actionLabel}</span>
       </span>
       <Kbd className="bg-black/20 text-bg-base border-black/30 text-caption">
         ⌘ Enter

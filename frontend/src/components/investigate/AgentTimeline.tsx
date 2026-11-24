@@ -12,10 +12,10 @@ interface AgentTimelineProps {
 }
 
 const RUNNING_PHASES = [
-  { name: 'ML Ranking', desc: 'Predicting suspect failure lines' },
-  { name: 'Log & Code Retrieval', desc: 'Searching AST and incident context' },
+  { name: 'ML Ranking', desc: 'Scoring supported log sessions' },
+  { name: 'Log & Repository Search', desc: 'Searching logs, source text, and incident context' },
   { name: 'Agent Reasoning', desc: 'Evaluating diagnostic hypotheses' },
-  { name: 'Synthesis & Validation', desc: 'Drafting grounded diagnosis & patch' },
+  { name: 'Synthesis & Validation', desc: 'Preparing a diagnosis and suggested remediation' },
 ]
 
 export function AgentTimeline({

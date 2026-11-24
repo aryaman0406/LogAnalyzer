@@ -60,7 +60,7 @@ export function CodePage() {
             Code & Diff Inspector
           </h1>
           <p className="text-xs text-text-secondary mt-0.5">
-            Inspect repository AST trees, cited line references, and AI-generated patch diffs.
+            Browse repository files and review suggested fixes. Automatic patch generation and application are not available.
           </p>
         </div>
 
@@ -140,13 +140,13 @@ export function CodePage() {
               }`}
             >
               <GitCompare className="h-3.5 w-3.5" />
-              <span>Proposed Patch Diff</span>
+              <span>Suggested Fix</span>
             </button>
           </div>
 
           {patchData?.suggested_fix && (
             <Badge variant="success" dot pulse>
-              PATCH STAGED
+              SUGGESTED FIX
             </Badge>
           )}
         </div>
@@ -167,7 +167,18 @@ export function CodePage() {
             <Skeleton className="h-64 w-full rounded-lg" />
           </div>
         ) : (
-          <DiffViewer diff={patchData?.diff || ''} />
+          patchData?.suggested_fix ? (
+            <div className="space-y-3">
+              <p className="text-xs text-text-muted">
+                Suggested remediation text only; it is not a generated diff and will not be applied automatically.
+              </p>
+              <pre className="border border-border rounded-md bg-black/60 p-4 whitespace-pre-wrap text-xs text-text-primary font-mono">
+                {patchData.suggested_fix}
+              </pre>
+            </div>
+          ) : (
+            <DiffViewer diff={patchData?.diff || ''} />
+          )
         )}
       </GlassCard>
     </div>

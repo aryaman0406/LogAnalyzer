@@ -3,10 +3,10 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18.0+-61DAFB.svg)](https://react.dev)
-[![Gemini](https://img.shields.io/badge/Gemini_2.0_Flash-Ready-4285F4.svg)](https://ai.google.dev)
+[![Gemini](https://img.shields.io/badge/Gemini_API-supported-4285F4.svg)](https://ai.google.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An autonomous incident investigation and log analysis platform. Combines **Google Gemini 2.0 Flash** for natural-language root-cause reasoning, **FAISS vector RAG** for runbook retrieval, an **external custom ML inference service** on Render for failure pattern classification, and **Drain3 / Random Forest** sequence anomaly scoring.
+An incident investigation and log analysis application. It uses **Google Gemini** for diagnosis (when configured), **FAISS with TF-IDF vectors** for local documentation retrieval, an optional **external ML inference service** for log ranking, and a **Drain3 / Random Forest** detector trained for HDFS block-session logs.
 
 ---
 
@@ -15,9 +15,9 @@ An autonomous incident investigation and log analysis platform. Combines **Googl
 ```mermaid
 flowchart LR
     Logs[Application Logs] --> Controller[Agent Controller]
-    Controller <--> Gemini[Google Gemini 2.0 Flash]
+    Controller <--> Gemini[Google Gemini]
     Controller <--> Tools[Diagnostic Tools]
-    Tools --> Git[Git History & AST]
+    Tools --> Git[Git History & Source Search]
     Tools --> RAG[FAISS Vector RAG]
     Tools --> ML[External ML Microservice\non Render]
     Tools --> Anomaly[Drain3 / RF Detector]
@@ -26,11 +26,19 @@ flowchart LR
 
 ### Core Components
 
-- **Reasoning Engine:** Google Gemini ReAct loop with grounded AST verification, Git forensics, and offline safe mode fallback.
+- **Reasoning Engine:** Google Gemini tool-calling investigation with file/function reference checks, Git history tools, and an offline fallback.
 - **External ML Microservice:** Independently deployed on Render (`incident-ml-service.onrender.com`) for log classification and suspect line ranking.
-- **Technical Documentation RAG:** In-memory FAISS cosine similarity index (`data/rag_index`) querying system architecture and the incident catalog.
+- **Technical Documentation RAG:** In-memory FAISS cosine-similarity index over TF-IDF vectors for the README and incident catalog.
 - **Target Simulation:** FastAPI sample e-commerce application with 8 reproducible incident modes (`INC-01` to `INC-08`).
-- **Investigation Console:** High-density React 18 / Vite / Tailwind UI with dark/light themes, live trace streaming, and timeline replay.
+- **Investigation Console:** React 18 / Vite / Tailwind UI with dark/light themes, investigation event streaming, history, and timeline replay.
+
+### Capability Scope
+
+- The investigator accepts pasted or uploaded text logs and can analyze PNG, JPEG, GIF, or WebP error screenshots with Gemini. Screenshot bytes are sent to Google for analysis.
+- The log viewer reads the bundled sample application log; it is not a live telemetry ingestion service.
+- The local anomaly model is only applicable to HDFS block-session logs. Other log formats are reported as unsupported by that detector.
+- Repository analysis uses bounded text search and file reads; AST call-graph traversal is not implemented.
+- The app returns suggested remediation text. Automatic patch generation, ready-to-merge diffs, and patch application are not implemented; the patch-apply API returns HTTP 501.
 
 ---
 
@@ -53,8 +61,8 @@ Copy-Item .env.example .env
 ```
 Key variables:
 - `GEMINI_API_KEY`: Required for Gemini natural-language reasoning.
+- `LLM_MODEL`: Optional Gemini model override.
 - `ML_MODEL_API_URL`: URL of the external ML service (`https://incident-ml-service.onrender.com`).
-- `API_PORT`: `8000` (Backend API).
 
 ### 3. Run Locally
 
@@ -72,6 +80,8 @@ cd frontend && npm run dev
 ```
 
 Open **`http://127.0.0.1:5173`** in your browser.
+
+On the investigation page, choose an error screenshot in the same upload control used for logs, then select **Analyze Image**. Images are sent to the configured Gemini API.
 
 ### 4. Simulate Incident Traffic
 
@@ -104,7 +114,8 @@ cd frontend && npm run build
 | `/api/investigations/{id}` | `GET` | Get status, final diagnosis report, and grounded evidence |
 | `/api/investigations/{id}/stream` | `GET` | SSE stream of live agent thoughts and tool calls |
 | `/api/models/status` | `GET` | Health check for Gemini, RAG index, and external ML service |
-| `/api/logs` | `GET` | Tail and filter application logs |
+| `/api/logs` | `GET` | Read and filter bundled sample logs |
+| `/api/images/analyze` | `POST` | Analyze a PNG, JPEG, GIF, or WebP image with Gemini (raw image body) |
 
 ---
 

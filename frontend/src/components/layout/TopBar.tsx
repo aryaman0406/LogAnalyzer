@@ -10,14 +10,13 @@ interface TopBarProps {
 
 export function TopBar({ title, onOpenMobile }: TopBarProps) {
   const { theme, toggleTheme } = useTheme()
-  const { data: statusData } = useQuery({
+  const { data: statusData, isError: statusUnavailable } = useQuery({
     queryKey: ['modelStatus'],
     queryFn: fetchModelStatus,
     refetchInterval: 15000,
   })
 
   const mlHealthy = statusData?.anomaly_detector?.available
-  const mlStatusText = mlHealthy ? 'ML Online' : 'ML Offline'
 
   return (
     <header className="h-16 border-b border-border bg-background-raised sticky top-0 z-30 px-4 md:px-6 flex items-center justify-between">
@@ -45,8 +44,10 @@ export function TopBar({ title, onOpenMobile }: TopBarProps) {
         {/* Active LLM Provider / Model Badge */}
         <div className="flex items-center gap-1.5 px-3 py-1 rounded bg-surface border border-border text-sm font-mono">
           <Bot className="h-4 w-4 text-accent shrink-0" aria-hidden="true" />
-          <span className="text-caption text-text-muted uppercase">Provider:</span>
-          <span className="text-text-primary font-semibold">Gemini Flash</span>
+          <span className="text-caption text-text-muted uppercase">Model:</span>
+          <span className="text-text-primary font-semibold">
+            {statusData ? statusData.active_model : 'Status unavailable'}
+          </span>
         </div>
 
         {/* ML Service Health Badge */}
@@ -64,7 +65,9 @@ export function TopBar({ title, onOpenMobile }: TopBarProps) {
                 : 'text-status-warning font-semibold text-caption'
             }
           >
-            {mlStatusText}
+            {statusData
+              ? mlHealthy ? 'HDFS Model Online' : 'HDFS Model Offline'
+              : statusUnavailable ? 'HDFS Status Unavailable' : 'Checking HDFS Model'}
           </span>
         </div>
 

@@ -15,6 +15,7 @@ data/logs/*
 data/*.db
 data/*.sqlite*
 data/traces/*
+data/uploads/
 data/loghub/*
 ml/models/**/*.bin
 ml/models/**/*.safetensors

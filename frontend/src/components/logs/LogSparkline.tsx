@@ -38,8 +38,8 @@ export function LogSparkline({ logs }: LogSparklineProps) {
         <AreaChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 0 }}>
           <defs>
             <linearGradient id="errorGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(0, 84%, 73%)" stopOpacity={0.6} />
-              <stop offset="95%" stopColor="hsl(0, 84%, 73%)" stopOpacity={0.0} />
+              <stop offset="5%" stopColor="hsl(var(--status-error))" stopOpacity={0.6} />
+              <stop offset="95%" stopColor="hsl(var(--status-error))" stopOpacity={0.0} />
             </linearGradient>
           </defs>
           <XAxis dataKey="bucket" hide />
@@ -59,7 +59,7 @@ export function LogSparkline({ logs }: LogSparklineProps) {
           <Area
             type="monotone"
             dataKey="errors"
-            stroke="hsl(0, 84%, 73%)"
+            stroke="hsl(var(--status-error))"
             strokeWidth={1.5}
             fillOpacity={1}
             fill="url(#errorGrad)"

@@ -10,6 +10,7 @@ interface InvestigationControlsProps {
   setLogFile: (val: string) => void
   provider: string
   setProvider: (val: string) => void
+  geminiConfigured: boolean
   disabled?: boolean
 }
 
@@ -22,6 +23,7 @@ export function InvestigationControls({
   setLogFile,
   provider,
   setProvider,
+  geminiConfigured,
   disabled = false,
 }: InvestigationControlsProps) {
   return (
@@ -37,9 +39,12 @@ export function InvestigationControls({
             <Bot className="h-3.5 w-3.5 text-accent" />
             <span>LLM Provider</span>
           </span>
-          <span className="text-caption text-status-success flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" /> Ready
-          </span>
+          {provider === 'gemini' && (
+            <span className={`text-caption flex items-center gap-1 ${geminiConfigured ? 'text-status-success' : 'text-status-warning'}`}>
+              {geminiConfigured ? <CheckCircle2 className="h-3 w-3" /> : <FileSearch className="h-3 w-3" />}
+              {geminiConfigured ? 'Configured' : 'Unavailable'}
+            </span>
+          )}
         </label>
         <select
           value={provider}
@@ -47,9 +52,7 @@ export function InvestigationControls({
           disabled={disabled}
           className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent font-mono disabled:opacity-50 transition-colors cursor-pointer"
         >
-          <option value="gemini">Google Gemini 2.0 Flash (Recommended)</option>
-          <option value="openai">OpenAI (gpt-4o-mini)</option>
-          <option value="anthropic">Anthropic (claude-3-5-haiku)</option>
+          <option value="gemini">Google Gemini (Recommended)</option>
           <option value="local">Diagnostic Engine (Offline Safe Fallback)</option>
         </select>
       </div>
@@ -62,10 +65,10 @@ export function InvestigationControls({
           label={
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
               <Sparkles className="h-4 w-4 text-accent" />
-              <span>Drain3 Anomaly Filter</span>
+              <span>HDFS Log Anomaly Scoring</span>
             </div>
           }
-          description="Pre-filters cluster logs with Drain3 template clustering"
+          description="Scores HDFS block-session logs with the local Random Forest detector"
         />
 
         <div className="h-px bg-border my-1" />
@@ -80,7 +83,7 @@ export function InvestigationControls({
               <span>Autonomous Diagnostics</span>
             </div>
           }
-          description="Permits read-only AST lookups, log grep, and git diff"
+          description="Permits read-only log and source searches plus Git history and diff lookups"
         />
       </div>
 

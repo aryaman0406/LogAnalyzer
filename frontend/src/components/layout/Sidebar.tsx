@@ -1,4 +1,6 @@
 import { NavLink } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { fetchModelStatus } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import {
   Workflow,
@@ -20,12 +22,26 @@ const navItems = [
   { to: '/investigate', label: 'Investigate', icon: Workflow, badge: null },
   { to: '/history', label: 'History & Replay', icon: History, badge: null },
   { to: '/logs', label: 'Log Explorer', icon: Terminal, badge: null },
-  { to: '/code', label: 'Code & AST', icon: FileCode2, badge: null },
+  { to: '/code', label: 'Source & Git', icon: FileCode2, badge: null },
   { to: '/evaluation', label: 'Evaluation', icon: BarChart3, badge: null },
   { to: '/model', label: 'ML Status', icon: Cpu, badge: null },
 ]
 
 export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
+  const { data: modelStatus, isPending, isError } = useQuery({
+    queryKey: ['modelStatus'],
+    queryFn: fetchModelStatus,
+    refetchInterval: 15000,
+  })
+  const apiReady = Boolean(modelStatus)
+  const statusLabel = modelStatus
+    ? modelStatus.status.toUpperCase()
+    : isPending
+      ? 'CHECKING'
+      : isError
+        ? 'UNAVAILABLE'
+        : 'UNKNOWN'
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -56,10 +72,10 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold tracking-tight text-text-primary flex items-center gap-1.5">
-                Incident Console
+                Incident Agent V2
               </span>
               <span className="text-caption text-text-muted font-mono">
-                Log Analyzer v1.0
+                v0.1-beta
               </span>
             </div>
           </NavLink>
@@ -112,10 +128,10 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
         <div className="p-4 border-t border-border bg-background-overlay/40 space-y-2">
           <div className="flex items-center justify-between text-caption font-mono">
             <span className="text-text-muted flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5 text-status-success" />
-              <span>Core Engine</span>
+              <Activity className={`h-3.5 w-3.5 ${apiReady ? 'text-status-success' : 'text-status-warning'}`} />
+              <span>Backend API</span>
             </span>
-            <span className="text-status-success font-semibold">ONLINE</span>
+            <span className={`${apiReady ? 'text-status-success' : 'text-status-warning'} font-semibold`}>{statusLabel}</span>
           </div>
           <div className="text-caption text-text-muted">
             Workspace: <span className="text-text-secondary font-mono">Local Repo</span>

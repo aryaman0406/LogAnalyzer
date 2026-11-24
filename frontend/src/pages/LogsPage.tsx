@@ -53,10 +53,10 @@ export function LogsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/60">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-text-primary">
-            Cluster Log Stream Explorer
+            Sample Log Explorer
           </h1>
           <p className="text-xs text-text-secondary mt-0.5">
-            Structured JSON log telemetry with real-time anomaly indexing and citation markers.
+            Search and filter the bundled sample application log. This page does not stream live telemetry.
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export function LogsPage() {
           className="gap-2 h-9 rounded-xl text-xs font-semibold"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin text-accent' : ''}`} />
-          <span>Refresh Stream</span>
+          <span>Refresh Logs</span>
         </Button>
       </div>
 
