@@ -9,7 +9,9 @@
         let saved = ''
         try {
           saved = localStorage.getItem('theme') || ''
-        } catch {}
+        } catch (error) {
+          if (!(error instanceof DOMException)) throw error
+        }
         const theme = saved === 'light' || saved === 'dark'
           ? saved
           : window.matchMedia('(prefers-color-scheme: dark)').matches
