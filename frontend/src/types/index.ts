@@ -162,20 +162,6 @@ export interface EvalResponse {
   rows: EvalRow[]
 }
 
-export interface ModelMetric {
-  model: string
-  precision: number
-  recall: number
-  f1: number
-  threshold: number
-  confusion_matrix?: number[][]
-}
-
-export interface ModelMetricsResponse {
-  available: boolean
-  models: ModelMetric[]
-}
-
 export interface PatchPreview {
   diff: string
   suggested_fix: string

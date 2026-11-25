@@ -15,32 +15,16 @@ EXP_DIR = ROOT / "experiments"
 EVAL_DIR = ROOT / "eval"
 
 def get_default_cloud_provider() -> str:
-    """Identify which cloud provider is configured, if any."""
-    if os.getenv("OPENAI_API_KEY"):
-        return "openai"
-    if os.getenv("GEMINI_API_KEY"):
-        return "gemini"
-    if os.getenv("ANTHROPIC_API_KEY"):
-        return "anthropic"
-    return "openai"
+    """Return the only supported cloud provider."""
+    return "gemini"
 
 def check_provider_preflight(provider: str) -> tuple[bool, str]:
     """Verify whether credentials or local checkpoints required for provider are present."""
-    if provider == "openai":
-        key = os.getenv("OPENAI_API_KEY")
-        if not key:
-            return False, "OPENAI_API_KEY is not configured in environment"
-        return True, "OpenAI API key configured"
-    elif provider in {"gemini", "google"}:
+    if provider in {"gemini", "google"}:
         key = os.getenv("GEMINI_API_KEY")
         if not key:
             return False, "GEMINI_API_KEY is not configured in environment"
         return True, "Gemini API key configured"
-    elif provider == "anthropic":
-        key = os.getenv("ANTHROPIC_API_KEY")
-        if not key:
-            return False, "ANTHROPIC_API_KEY is not configured in environment"
-        return True, "Anthropic API key configured"
     elif provider in {"local", "local_incident", "finetuned"}:
         return True, "Local inference engine ready"
     return False, f"Unknown provider: {provider}"

@@ -165,7 +165,7 @@ export function LogsPage() {
           />
         ) : (
           <>
-            <LogViewer logs={logs} total={total} highlightQuery={query} />
+            <LogViewer logs={logs} />
 
             {/* Pagination footer */}
             {totalPages > 1 && (

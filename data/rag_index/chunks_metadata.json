@@ -2,22 +2,27 @@
   {
     "source": "README.md",
     "title": "Incident Agent V2",
-    "content": "# Incident Agent V2\n\n[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)\n[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)\n[![React](https://img.shields.io/badge/React-18.0+-61DAFB.svg)](https://react.dev)\n[![Gemini](https://img.shields.io/badge/Gemini_2.0_Flash-Ready-4285F4.svg)](https://ai.google.dev)\n[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)"
+    "content": "# Incident Agent V2\n\n[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)\n[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)\n[![React](https://img.shields.io/badge/React-18.0+-61DAFB.svg)](https://react.dev)\n[![Gemini](https://img.shields.io/badge/Gemini_API-supported-4285F4.svg)](https://ai.google.dev)\n[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)"
   },
   {
     "source": "README.md",
     "title": "Incident Agent V2",
-    "content": "An autonomous incident investigation and log analysis platform. Combines **Google Gemini 2.0 Flash** for natural-language root-cause reasoning, **FAISS vector RAG** for runbook retrieval, an **external custom ML inference service** on Render for failure pattern classification, and **Drain3 / Random Forest** sequence anomaly scoring.\n\n---"
+    "content": "An incident investigation and log analysis application. It uses **Google Gemini** for diagnosis (when configured), **FAISS with TF-IDF vectors** for local documentation retrieval, an optional **external ML inference service** for log ranking, and a **Drain3 / Random Forest** detector trained for HDFS block-session logs.\n\n---"
   },
   {
     "source": "README.md",
     "title": "Architecture Overview",
-    "content": "## Architecture Overview\n\n```mermaid\nflowchart LR\n    Logs[Application Logs] --> Controller[Agent Controller]\n    Controller <--> Gemini[Google Gemini 2.0 Flash]\n    Controller <--> Tools[Diagnostic Tools]\n    Tools --> Git[Git History & AST]\n    Tools --> RAG[FAISS Vector RAG]\n    Tools --> ML[External ML Microservice\\non Render]\n    Tools --> Anomaly[Drain3 / RF Detector]\n    Controller --> UI[React Console]\n```"
+    "content": "## Architecture Overview\n\n```mermaid\nflowchart LR\n    Logs[Application Logs] --> Controller[Agent Controller]\n    Controller <--> Gemini[Google Gemini]\n    Controller <--> Tools[Diagnostic Tools]\n    Tools --> Git[Git History & Source Search]\n    Tools --> RAG[FAISS Vector RAG]\n    Tools --> ML[External ML Microservice\\non Render]\n    Tools --> Anomaly[Drain3 / RF Detector]\n    Controller --> UI[React Console]\n```"
   },
   {
     "source": "README.md",
     "title": "Core Components",
-    "content": "### Core Components\n\n- **Reasoning Engine:** Google Gemini ReAct loop with grounded AST verification, Git forensics, and offline safe mode fallback.\n- **External ML Microservice:** Independently deployed on Render (`incident-ml-service.onrender.com`) for log classification and suspect line ranking.\n- **Technical Documentation RAG:** In-memory FAISS cosine similarity index (`data/rag_index`) querying system architecture and the incident catalog.\n- **Target Simulation:** FastAPI sample e-commerce application with 8 reproducible incident modes (`INC-01` to `INC-08`).\n- **Investigation Console:** High-density React 18 / Vite / Tailwind UI with dark/light themes, live trace streaming, and timeline replay.\n\n---"
+    "content": "### Core Components\n\n- **Reasoning Engine:** Google Gemini tool-calling investigation with file/function reference checks, Git history tools, and an offline fallback.\n- **External ML Microservice:** Independently deployed on Render (`incident-ml-service.onrender.com`) for log classification and suspect line ranking.\n- **Technical Documentation RAG:** In-memory FAISS cosine-similarity index over TF-IDF vectors for the README and incident catalog.\n- **Target Simulation:** FastAPI sample e-commerce application with 8 reproducible incident modes (`INC-01` to `INC-08`).\n- **Investigation Console:** React 18 / Vite / Tailwind UI with dark/light themes, investigation event streaming, history, and timeline replay."
+  },
+  {
+    "source": "README.md",
+    "title": "Capability Scope",
+    "content": "### Capability Scope\n\n- The investigator accepts pasted or uploaded text logs and can analyze PNG, JPEG, GIF, or WebP error screenshots with Gemini. Screenshot bytes are sent to Google for analysis.\n- The log viewer reads the bundled sample application log; it is not a live telemetry ingestion service.\n- The local anomaly model is only applicable to HDFS block-session logs. Other log formats are reported as unsupported by that detector.\n- Repository analysis uses bounded text search and file reads; AST call-graph traversal is not implemented.\n- The app returns suggested remediation text. Automatic patch generation, ready-to-merge diffs, and patch application are not implemented; the patch-apply API returns HTTP 501.\n\n---"
   },
   {
     "source": "README.md",
@@ -32,7 +37,7 @@
   {
     "source": "README.md",
     "title": "2. Environment Setup",
-    "content": "### 2. Environment Setup\n\nCreate `.env` from `.env.example`:\n```powershell\nCopy-Item .env.example .env\n```\nKey variables:\n- `GEMINI_API_KEY`: Required for Gemini natural-language reasoning.\n- `ML_MODEL_API_URL`: URL of the external ML service (`https://incident-ml-service.onrender.com`).\n- `API_PORT`: `8000` (Backend API)."
+    "content": "### 2. Environment Setup\n\nCreate `.env` from `.env.example`:\n```powershell\nCopy-Item .env.example .env\n```\nKey variables:\n- `GEMINI_API_KEY`: Required for Gemini natural-language reasoning.\n- `LLM_MODEL`: Optional Gemini model override.\n- `ML_MODEL_API_URL`: URL of the external ML service (`https://incident-ml-service.onrender.com`)."
   },
   {
     "source": "README.md",
@@ -52,7 +57,7 @@
   {
     "source": "README.md",
     "title": "Terminal 3: Frontend Console",
-    "content": "# Terminal 3: Frontend Console\ncd frontend && npm run dev\n```\n\nOpen **`http://127.0.0.1:5173`** in your browser."
+    "content": "# Terminal 3: Frontend Console\ncd frontend && npm run dev\n```\n\nOpen **`http://127.0.0.1:5173`** in your browser.\n\nOn the investigation page, choose an error screenshot in the same upload control used for logs, then select **Analyze Image**. Images are sent to the configured Gemini API."
   },
   {
     "source": "README.md",
@@ -67,7 +72,7 @@
   {
     "source": "README.md",
     "title": "Primary API Endpoints",
-    "content": "## Primary API Endpoints\n\n| Endpoint | Method | Description |\n| :--- | :--- | :--- |\n| `/api/investigations` | `POST` | Start an autonomous incident investigation |\n| `/api/investigations/{id}` | `GET` | Get status, final diagnosis report, and grounded evidence |\n| `/api/investigations/{id}/stream` | `GET` | SSE stream of live agent thoughts and tool calls |\n| `/api/models/status` | `GET` | Health check for Gemini, RAG index, and external ML service |\n| `/api/logs` | `GET` | Tail and filter application logs |\n\n---"
+    "content": "## Primary API Endpoints\n\n| Endpoint | Method | Description |\n| :--- | :--- | :--- |\n| `/api/investigations` | `POST` | Start an autonomous incident investigation |\n| `/api/investigations/{id}` | `GET` | Get status, final diagnosis report, and grounded evidence |\n| `/api/investigations/{id}/stream` | `GET` | SSE stream of live agent thoughts and tool calls |\n| `/api/models/status` | `GET` | Health check for Gemini, RAG index, and external ML service |\n| `/api/logs` | `GET` | Read and filter bundled sample logs |\n| `/api/images/analyze` | `POST` | Analyze a PNG, JPEG, GIF, or WebP image with Gemini (raw image body) |\n\n---"
   },
   {
     "source": "README.md",

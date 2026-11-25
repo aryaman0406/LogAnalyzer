@@ -167,24 +167,6 @@
     box-shadow: none;
   }
 
-  .surface-card-hover:hover {
-    border-color: hsl(var(--border-hover));
-  }
-
-  .surface-subtle {
-    background-color: hsl(var(--surface));
-    border: 1px solid hsl(var(--border));
-    border-radius: 6px;
-  }
-
-  /* Monospace typography */
-  .font-mono-code {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.875rem; /* 14px */
-    line-height: 1.5;
-    font-variant-numeric: tabular-nums;
-  }
-
   .terminal-surface {
     background: #0f172a;
     border: 1px solid #1e293b;

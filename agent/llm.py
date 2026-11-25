@@ -32,26 +32,22 @@ class DiagnosticModeProvider:
         if tools and "read_logs" not in notes and ("Investigate this incident" in notes or "Log file" in notes):
             return {
                 "text": "Checking recent error logs to understand the failure.",
-                "tool_calls": [{"id": "call_read_logs", "name": "read_logs", "arguments": {"file": "data/logs/sample_app.jsonl", "limit": 50}}],
-                "raw": {}
+                "tool_calls": [{"id": "call_read_logs", "name": "read_logs", "arguments": {"file": "data/logs/sample_app.jsonl", "limit": 50}}]
             }
         elif tools and "predict_custom_ml" not in notes and any(s["function"]["name"] == "predict_custom_ml" for s in tools) and os.getenv("ML_MODEL_API_URL"):
             return {
                 "text": "Querying independent Custom ML model service for incident classification signals.",
-                "tool_calls": [{"id": "call_predict_custom_ml", "name": "predict_custom_ml", "arguments": {"log_file": "data/logs/sample_app.jsonl", "incident_id": active_incident}}],
-                "raw": {}
+                "tool_calls": [{"id": "call_predict_custom_ml", "name": "predict_custom_ml", "arguments": {"log_file": "data/logs/sample_app.jsonl", "incident_id": active_incident}}]
             }
         elif tools and "detect_anomalies" not in notes and any(s["function"]["name"] == "detect_anomalies" for s in tools):
             return {
                 "text": "Running sequence anomaly detector to check for traffic baseline deviation.",
-                "tool_calls": [{"id": "call_detect_anomalies", "name": "detect_anomalies", "arguments": {"log_file": "data/logs/sample_app.jsonl"}}],
-                "raw": {}
+                "tool_calls": [{"id": "call_detect_anomalies", "name": "detect_anomalies", "arguments": {"log_file": "data/logs/sample_app.jsonl"}}]
             }
         elif tools and "search_code" not in notes and any(s["function"]["name"] == "search_code" for s in tools):
             return {
                 "text": "Searching code for failure references.",
-                "tool_calls": [{"id": "call_search_code", "name": "search_code", "arguments": {"query": "order_failure"}}],
-                "raw": {}
+                "tool_calls": [{"id": "call_search_code", "name": "search_code", "arguments": {"query": "order_failure"}}]
             }
 
         # Fallback structured JSON synthesis
@@ -71,7 +67,7 @@ class DiagnosticModeProvider:
             "severity": "high",
             "hallucination_warnings": []
         }
-        return {"text": json.dumps(diagnosis, indent=2), "tool_calls": [], "raw": {}}
+        return {"text": json.dumps(diagnosis, indent=2), "tool_calls": []}
 
 
 class LLMClient:
@@ -189,7 +185,7 @@ class LLMClient:
                     })
                 elif getattr(part, "text", None):
                     text += part.text
-            return {"text": text, "tool_calls": calls, "raw": response}
+            return {"text": text, "tool_calls": calls}
 
         raise ValueError(f"unsupported provider completion: {self.provider}")
 

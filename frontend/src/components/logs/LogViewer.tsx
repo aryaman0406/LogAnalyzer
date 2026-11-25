@@ -1,17 +1,14 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 import type { LogLine } from '@/types'
 
 interface LogViewerProps {
   logs: LogLine[]
-  total: number
-  highlightQuery?: string
 }
 
-export function LogViewer({ logs, highlightQuery }: LogViewerProps) {
+export function LogViewer({ logs }: LogViewerProps) {
   const [selectedLine, setSelectedLine] = useState<number | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
 
   const getLevelVariant = (level: string) => {
     switch (level?.toUpperCase()) {
@@ -41,7 +38,6 @@ export function LogViewer({ logs, highlightQuery }: LogViewerProps) {
 
   return (
     <div
-      ref={containerRef}
       className="font-mono text-[11px] leading-relaxed select-text overflow-y-auto max-h-[calc(100vh-280px)] border border-border rounded-md bg-black/40 divide-y divide-border/40"
     >
       {logs.map((log) => {
@@ -79,7 +75,6 @@ export function LogViewer({ logs, highlightQuery }: LogViewerProps) {
               </Badge>
             </span>
 
-            {/* Message with query highlight */}
             <span className="flex-1 text-text-primary whitespace-pre-wrap break-all">
               {log.message}
             </span>

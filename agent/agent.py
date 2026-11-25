@@ -327,18 +327,6 @@ class Investigator:
             if not use_tools:
                 raise ValueError("provider requested tools while tool access is disabled")
 
-            if client.provider == "openai":
-                messages.append({
-                    "role": "assistant",
-                    "content": result["raw"].choices[0].message.content,
-                    "tool_calls": [{"id": c.id, "type": "function", "function": {"name": c.function.name, "arguments": c.function.arguments}} for c in result["raw"].choices[0].message.tool_calls]
-                })
-            elif client.provider == "anthropic":
-                messages.append({
-                    "role": "assistant",
-                    "content": [{"type": "tool_use", "id": b.id, "name": b.name, "input": b.input} for b in result["raw"].content if b.type == "tool_use"]
-                })
-
             tool_results = []
             for call in calls:
                 args = call["arguments"]
@@ -387,16 +375,10 @@ class Investigator:
                                 break
 
                 notes = (notes + f"\n{call['name']}: {summary}")[-3000:]
-                if client.provider == "openai":
-                    messages.append({"role": "tool", "tool_call_id": call["id"], "content": output})
-                elif client.provider == "anthropic":
-                    tool_results.append({"type": "tool_result", "tool_use_id": call["id"], "content": output})
-                else:
+                if client.provider in {"gemini", "google"}:
                     tool_results.append(f"Tool {call['name']} result: {output}")
 
-            if client.provider == "anthropic":
-                messages.append({"role": "user", "content": tool_results})
-            elif client.provider in {"gemini", "google"}:
+            if client.provider in {"gemini", "google"}:
                 messages.append({"role": "user", "content": "\n".join(tool_results)})
             messages.append({"role": "user", "content": f"Investigation notes so far (evidence summaries):{notes}"})
 

@@ -1,6 +1,6 @@
 import type {
   Incident, LogsResponse, SourceFile, Investigation,
-  StartRequest, EvalResponse, ModelMetricsResponse, SSEEvent, PatchPreview,
+  StartRequest, EvalResponse, SSEEvent, PatchPreview,
   ModelStatusInfo, ImageDiagnosis,
 } from '@/types'
 
@@ -97,10 +97,6 @@ export async function analyzeImage(file: File, signal?: AbortSignal): Promise<Im
   return res.json() as Promise<ImageDiagnosis>
 }
 
-export function fetchInvestigation(id: string): Promise<Investigation> {
-  return get(`/api/investigations/${id}`)
-}
-
 export function fetchHistory(): Promise<Investigation[]> {
   return get('/api/investigations')
 }
@@ -148,18 +144,10 @@ export function fetchPatchPreview(id: string): Promise<PatchPreview> {
   return post(`/api/investigations/${id}/patch/preview`)
 }
 
-export function applyPatch(id: string): Promise<unknown> {
-  return post(`/api/investigations/${id}/patch/apply`, { approved: true })
-}
-
 // ── Eval & Model ────────────────────────────────────────
 
 export function fetchEvalResults(): Promise<EvalResponse> {
   return get('/api/eval/results')
-}
-
-export function fetchModelMetrics(): Promise<ModelMetricsResponse> {
-  return get('/api/model/metrics')
 }
 
 export function fetchModels(): Promise<{ providers: Array<{ id: string; name: string; model: string; available: boolean; adapter_ready?: boolean }> }> {

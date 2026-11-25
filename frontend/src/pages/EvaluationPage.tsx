@@ -38,10 +38,6 @@ export function EvaluationPage() {
   const inc07Row = completedRows.find((r: EvalRow) => r.incident_id === 'INC-07')
   const inc07Score = inc07Row ? `${Math.round((parseFloat(inc07Row.judge_score) || 0) * 100)}%` : '100%'
 
-  const totalHallucinations = completedRows.filter(
-    (r: EvalRow) => r.hallucinated?.toLowerCase() === 'true' || r.hallucinated === '1'
-  ).length
-
   return (
     <div className="space-y-4 max-w-[1600px] mx-auto">
       {/* Header */}

@@ -2,7 +2,13 @@
 from __future__ import annotations
 from pathlib import Path
 
-from eval.run_eval import evaluate_answer_against_truth, generate_experiment_reports, SETUPS_CONFIG
+from eval.run_eval import (
+    SETUPS_CONFIG,
+    check_provider_preflight,
+    evaluate_answer_against_truth,
+    generate_experiment_reports,
+    get_default_cloud_provider,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 EXP_DIR = ROOT / "experiments"
@@ -14,6 +20,11 @@ def test_setups_configuration_completeness():
         assert "name" in SETUPS_CONFIG[s]
         assert "provider" in SETUPS_CONFIG[s]
         assert "use_tools" in SETUPS_CONFIG[s]
+
+def test_evaluation_only_selects_supported_cloud_provider(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    assert get_default_cloud_provider() == "gemini"
+    assert check_provider_preflight("openai") == (False, "Unknown provider: openai")
 
 def test_evaluate_answer_against_truth_scoring():
     """Verify evaluation metric calculations and error categorization."""
