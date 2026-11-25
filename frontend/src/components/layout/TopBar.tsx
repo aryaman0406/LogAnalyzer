@@ -42,7 +42,7 @@ export function TopBar({ title, onOpenMobile }: TopBarProps) {
       {/* Right: Badges & Theme Toggle */}
       <div className="flex items-center gap-2.5">
         {/* Active LLM Provider / Model Badge */}
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded bg-surface border border-border text-sm font-mono">
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded bg-surface border border-border text-sm font-mono">
           <Bot className="h-4 w-4 text-accent shrink-0" aria-hidden="true" />
           <span className="text-caption text-text-muted uppercase">Model:</span>
           <span className="text-text-primary font-semibold">
@@ -51,7 +51,7 @@ export function TopBar({ title, onOpenMobile }: TopBarProps) {
         </div>
 
         {/* ML Service Health Badge */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded bg-surface border border-border text-sm font-mono">
+        <div className="hidden xl:flex items-center gap-2 px-3 py-1 rounded bg-surface border border-border text-sm font-mono">
           <Cpu className="h-4 w-4 text-text-muted shrink-0" aria-hidden="true" />
           <span
             className={`w-2 h-2 rounded-full shrink-0 ${
