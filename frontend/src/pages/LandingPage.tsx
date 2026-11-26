@@ -262,6 +262,9 @@ function HeroSection() {
             <span className="inline-flex items-center gap-1.5"><Search size={14} className="text-accent" /> Source and Git search</span>
             <span className="inline-flex items-center gap-1.5"><Activity size={14} className="text-accent" /> HDFS-only anomaly model</span>
           </div>
+          <p className="mt-4 max-w-2xl text-xs leading-5 text-text-muted">
+            Accepted logs: .txt, .log, .jsonl, or pasted plain text (up to 5 MB). Local anomaly scoring applies only to HDFS block-session logs; other log formats can still use general investigation. Error screenshots are also supported as PNG, JPEG, GIF, or WebP (up to 10 MB; Gemini required).
+          </p>
         </div>
         <ConsolePreview />
       </div>
