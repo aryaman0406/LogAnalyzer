@@ -139,7 +139,9 @@ export function ReportPanel({ report, error, investigationId }: ReportPanelProps
 
             <div className="flex items-center gap-3 text-caption font-mono text-text-muted">
               <span>
-                Provider: <strong className="text-text-primary font-semibold">Gemini</strong>
+                Provider: <strong className="text-text-primary font-semibold">
+                  {report.llm_fallback?.used ? 'Offline Fallback' : 'Gemini'}
+                </strong>
               </span>
               <span>•</span>
               <span>

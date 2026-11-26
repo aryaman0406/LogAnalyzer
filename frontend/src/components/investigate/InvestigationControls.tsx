@@ -101,6 +101,7 @@ export function InvestigationControls({
           placeholder="e.g. data/logs/real_log_1.txt"
           className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent font-mono disabled:opacity-50 transition-colors"
         />
+        <p className="text-[11px] text-text-muted font-mono">Path relative to repo root. Leave blank to use the uploaded/pasted log or default sample.</p>
       </div>
     </div>
   )

@@ -113,16 +113,18 @@ export function InvestigatePage() {
 
   const handlePasteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
-    if (imageFile) setLogFileName('pasted_log.txt')
+    // Always clear image state when user types in paste area
     setImageFile(null)
     setImageDiagnosis(null)
     setImageError(null)
+    // Replace image filename with pasted_log.txt; keep existing log filename if already set
+    if (!logFileName || logFileName === logFileName) {
+      if (text && !logContent) setLogFileName('pasted_log.txt')
+      else if (!text) setLogFileName('')
+    }
     setLogContent(text)
     setLogLineCount(text.split('\n').filter(Boolean).length)
     setLogSizeBytes(new Blob([text]).size)
-    if (!logFileName) {
-      setLogFileName('pasted_log.txt')
-    }
   }
 
   const handleClearCustomLog = () => {
@@ -317,8 +319,9 @@ export function InvestigatePage() {
                 onCancel={handleCancel}
                 running={isProcessing}
                 disabled={
-                  (!incidentId && !logFile && !logContent) ||
-                  (Boolean(imageError) && !imageFile)
+                  isProcessing ||
+                  (!incidentId && !logFile && !logContent && !imageFile) ||
+                  (Boolean(imageError) && Boolean(imageFile))
                 }
                 actionLabel={imageFile ? 'Analyze Image' : 'Run Investigation'}
                 stopLabel={imageFile ? 'Stop Image Analysis' : 'Stop Investigation'}

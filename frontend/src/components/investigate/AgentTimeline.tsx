@@ -150,8 +150,8 @@ export function AgentTimeline({
       {/* Footer bar */}
       <div className="px-5 py-2.5 border-t border-border bg-background-overlay/40 flex items-center justify-between text-caption font-mono text-text-muted">
         <span className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-status-success" />
-          <span>Real-time Stream: Active</span>
+          <span className={`w-2 h-2 rounded-full ${running ? 'bg-status-success animate-pulse' : events.length > 0 ? 'bg-status-success' : 'bg-border'}`} />
+          <span>{running ? 'Real-time Stream: Active' : events.length > 0 ? 'Investigation Complete' : 'Stream: Idle'}</span>
         </span>
         <span>Max Safety Steps: 15</span>
       </div>

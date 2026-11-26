@@ -65,6 +65,7 @@ export function useInvestigation() {
         } else if (event.type === 'error') {
           setState((prev) => ({
             ...prev,
+            running: false,
             events: [...prev.events, event],
             error: (event.content as { message?: string })?.message || 'Investigation failed',
           }))

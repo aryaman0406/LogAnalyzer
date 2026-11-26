@@ -53,31 +53,31 @@ export function ModelPage() {
                 <span className="font-mono font-medium text-text-primary">{status?.active_model}</span>
               </div>
             </div>
+          </div>
 
-            {/* External ML Service Card */}
-            <div className="surface-card p-5 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <Database className="h-5 w-5 text-accent" />
-                  <h2 className="text-base font-semibold text-text-primary">External ML Service</h2>
-                </div>
-                <Badge variant={status?.external_ml_service?.available ? 'success' : 'warn'}>
-                  {status?.external_ml_service?.status || 'UNAVAILABLE'}
-                </Badge>
+          {/* External ML Service Card */}
+          <div className="surface-card p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Database className="h-5 w-5 text-accent" />
+                <h2 className="text-base font-semibold text-text-primary">External ML Service</h2>
               </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-text-secondary">Configured</span>
-                  <span className="font-mono font-medium text-text-primary">
-                    {status?.external_ml_service?.configured ? 'Yes' : 'No'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-text-secondary">Availability</span>
-                  <span className="font-mono font-medium text-text-primary">
-                    {status?.external_ml_service?.available ? 'Online' : 'Offline'}
-                  </span>
-                </div>
+              <Badge variant={status?.external_ml_service?.available ? 'success' : 'warn'}>
+                {status?.external_ml_service?.status || 'UNAVAILABLE'}
+              </Badge>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-text-secondary">Configured</span>
+                <span className="font-mono font-medium text-text-primary">
+                  {status?.external_ml_service?.configured ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-text-secondary">Availability</span>
+                <span className="font-mono font-medium text-text-primary">
+                  {status?.external_ml_service?.available ? 'Online' : 'Offline'}
+                </span>
               </div>
             </div>
           </div>

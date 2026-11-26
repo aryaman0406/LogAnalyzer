@@ -49,12 +49,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
+    allow_credentials=True,
 )
 
 queues: dict[str, asyncio.Queue] = {}
 done: set[str] = set()
 loop: asyncio.AbstractEventLoop | None = None
+# Max concurrent investigation results kept in memory before evicting oldest ones
+_MAX_CACHED_INVESTIGATIONS = 200
 
 class StartRequest(BaseModel):
     incident_id: str | None = None
@@ -169,19 +172,20 @@ def _run_investigation(ident: str, req: StartRequest) -> None:
             uploaded_log.write_text(req.log_content, encoding="utf-8")
             log_file = uploaded_log.relative_to(ROOT).as_posix()
 
+        # Pass provider/model/incident_id directly to Investigator rather than
+        # mutating os.environ (which is shared across all threads and would cause
+        # race conditions when multiple investigations run concurrently).
         if req.incident_id:
             os.environ["ACTIVE_INCIDENT"] = req.incident_id
-        if req.provider:
-            os.environ["LLM_PROVIDER"] = req.provider
-        if req.model:
-            os.environ["LLM_MODEL"] = req.model
 
         result = Investigator().investigate(
             req.incident_id or "Uploaded log incident",
             log_file=log_file,
             use_tools=req.use_tools,
             use_anomaly_detector=req.use_anomaly_detector,
-            on_event=send
+            on_event=send,
+            provider=req.provider,
+            model=req.model,
         )
         state_json = json.dumps(result.get("state", {}))
         with db() as conn:
@@ -202,6 +206,11 @@ def _run_investigation(ident: str, req: StartRequest) -> None:
                 logger.exception("Unable to remove temporary uploaded log")
         done.add(ident)
         send({"type": "done", "step": -1, "timestamp": time.time(), "content": {}})
+        # Evict oldest entries to prevent unbounded memory growth
+        if len(done) > _MAX_CACHED_INVESTIGATIONS:
+            oldest = next(iter(done))
+            done.discard(oldest)
+            queues.pop(oldest, None)
 
 @app.post("/api/investigations", response_model=StartResponse, status_code=202)
 @app.post("/investigations", response_model=StartResponse, status_code=202)

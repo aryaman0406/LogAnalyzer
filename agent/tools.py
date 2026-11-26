@@ -91,7 +91,10 @@ def read_logs(file: str, start_time: str = "", end_time: str = "", level: str = 
 
 def grep_logs(file: str, pattern: str, context_lines: int = 2) -> str:
     lines=_path(file).read_text(encoding="utf-8",errors="replace").splitlines(); context=max(0,min(int(context_lines),10)); out=[]
-    rx=re.compile(pattern,re.I)
+    try:
+        rx=re.compile(pattern,re.I)
+    except re.error as exc:
+        return _clip(json.dumps({"error": "re.error", "detail": f"Invalid regex pattern: {exc}"}))
     for i,line in enumerate(lines):
         if rx.search(line): out.extend(f"{j+1}: {lines[j]}" for j in range(max(0,i-context),min(len(lines),i+context+1)))
     return _clip("\n".join(dict.fromkeys(out)) or "No matches")

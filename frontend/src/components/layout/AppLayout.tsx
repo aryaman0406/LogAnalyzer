@@ -22,9 +22,9 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-background text-text-primary flex">
       <Sidebar mobileOpen={mobileOpen} onCloseMobile={() => setMobileOpen(false)} />
-      <main className="flex-1 flex flex-col min-w-0 md:ml-64 min-h-screen">
+      <main className="flex-1 flex flex-col min-w-0 md:ml-64 min-h-screen overflow-hidden">
         <TopBar title={title} onOpenMobile={() => setMobileOpen(true)} />
-        <section className="flex-1 min-h-0 p-4 md:p-6 lg:p-8 overflow-y-auto max-w-[1280px] w-full mx-auto">
+        <section className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto max-w-[1400px] w-full mx-auto">
           <PageTransition>
             <Outlet />
           </PageTransition>

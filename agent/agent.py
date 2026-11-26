@@ -73,7 +73,8 @@ class Investigator:
         self.max_steps = max(1, min(max_steps, 30))
 
     def investigate(self, query: str, *, log_file: str = "data/logs/sample_app.jsonl", use_tools: bool = True,
-                    use_anomaly_detector: bool = True, on_event: Callable[[dict], None] | None = None) -> dict[str, Any]:
+                    use_anomaly_detector: bool = True, on_event: Callable[[dict], None] | None = None,
+                    provider: str | None = None, model: str | None = None) -> dict[str, Any]:
         trace_id = str(uuid.uuid4())
         trace_dir = ROOT / "data" / "traces"
         trace_dir.mkdir(parents=True, exist_ok=True)
@@ -99,7 +100,7 @@ class Investigator:
                 on_event(event)
 
         try:
-            client = LLMClient()
+            client = LLMClient(provider=provider, model=model)
         except Exception as exc:
             emit("error", 0, {"message": str(exc)})
             state.status = "failed"

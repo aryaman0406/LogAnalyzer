@@ -89,7 +89,7 @@ class LLMClient:
                 try:
                     from google import genai
                     self.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-                    self.model = self.model or "gemini-3.5-flash-lite"
+                    self.model = self.model or "gemini-2.0-flash-lite"
                 except Exception as exc:
                     logger.warning("Failed to initialize Gemini client (%s). Falling back to offline diagnostic provider.", type(exc).__name__)
                     self.provider = "offline"
