@@ -93,3 +93,21 @@ def test_uploaded_log_content_is_used_and_removed(monkeypatch):
     assert observed["content"] == "ERROR database connection timed out"
     assert isinstance(observed["path"], Path)
     assert not observed["path"].exists()
+
+def test_incident_id_does_not_leak_across_investigations(monkeypatch):
+    seen_incident_ids = []
+
+    class FakeInvestigator:
+        def investigate(self, query, **kwargs):
+            seen_incident_ids.append(kwargs.get("incident_id"))
+            return {"state": {}, "result": {}, "trace": []}
+
+    monkeypatch.delenv("ACTIVE_INCIDENT", raising=False)
+    monkeypatch.setattr("api.main.Investigator", FakeInvestigator)
+    with TestClient(app) as client:
+        r1 = client.post("/api/investigations", json={"incident_id": "INC-01"})
+        r2 = client.post("/api/investigations", json={"incident_id": None, "log_content": "ERROR boom"})
+
+    assert r1.status_code == 202
+    assert r2.status_code == 202
+    assert seen_incident_ids == ["INC-01", None]

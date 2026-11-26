@@ -118,7 +118,7 @@ export function CodePage() {
 
       {/* Main Tabs Container */}
       <GlassCard className="p-4 space-y-3" hover={false}>
-        <div className="flex items-center justify-between border-b border-border/80 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 pb-3">
           <div className="flex items-center gap-2 p-1 bg-surface/40 rounded-xl border border-border/60">
             <button
               onClick={() => setActiveTab('source')}

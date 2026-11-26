@@ -175,9 +175,6 @@ def _run_investigation(ident: str, req: StartRequest) -> None:
         # Pass provider/model/incident_id directly to Investigator rather than
         # mutating os.environ (which is shared across all threads and would cause
         # race conditions when multiple investigations run concurrently).
-        if req.incident_id:
-            os.environ["ACTIVE_INCIDENT"] = req.incident_id
-
         result = Investigator().investigate(
             req.incident_id or "Uploaded log incident",
             log_file=log_file,
@@ -186,6 +183,7 @@ def _run_investigation(ident: str, req: StartRequest) -> None:
             on_event=send,
             provider=req.provider,
             model=req.model,
+            incident_id=req.incident_id,
         )
         state_json = json.dumps(result.get("state", {}))
         with db() as conn:

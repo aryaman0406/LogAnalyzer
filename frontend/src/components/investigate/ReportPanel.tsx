@@ -241,8 +241,8 @@ export function ReportPanel({ report, error, investigationId }: ReportPanelProps
 
           {/* Ranked Table */}
           {report.ml_ranking?.available && report.ml_ranking.top_lines && report.ml_ranking.top_lines.length > 0 ? (
-            <div className="border border-border rounded overflow-hidden bg-background">
-              <table className="w-full text-left text-sm">
+            <div className="border border-border rounded overflow-x-auto bg-background">
+              <table className="w-full min-w-[540px] text-left text-sm">
                 <thead className="bg-surface border-b border-border text-caption font-mono uppercase text-text-muted">
                   <tr>
                     <th className="px-3 py-2 w-16">Rank</th>

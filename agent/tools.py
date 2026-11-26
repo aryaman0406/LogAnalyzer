@@ -81,10 +81,18 @@ def read_logs(file: str, start_time: str = "", end_time: str = "", level: str = 
         for line in stream:
             try: row=json.loads(line)
             except json.JSONDecodeError: row={"timestamp":"","level":"","message":line.rstrip("\n")}
-            if level and row.get("level","").upper()!=level.upper(): continue
+            if level:
+                row_level = row.get("level", "").upper()
+                if row_level:
+                    if row_level != level.upper(): continue
+                elif level.upper() not in line.upper():
+                    continue
             ts=row.get("timestamp","")
-            if start_time and ts < start_time: continue
-            if end_time and ts > end_time: continue
+            if ts:
+                if start_time and ts < start_time: continue
+                if end_time and ts > end_time: continue
+            elif start_time or end_time:
+                continue
             rows.append(row)
             if len(rows)>=limit: break
     return _clip("\n".join(json.dumps(r,ensure_ascii=False) for r in rows))
@@ -101,13 +109,30 @@ def grep_logs(file: str, pattern: str, context_lines: int = 2) -> str:
 
 def log_stats(file: str, bucket_minutes: int = 5) -> str:
     width=max(1,min(int(bucket_minutes),1440))*60; buckets=defaultdict(Counter)
+    total_lines = 0
+    plaintext_levels: Counter[str] = Counter()
     with _path(file).open(encoding="utf-8",errors="replace") as stream:
         for line in stream:
-            try: row=json.loads(line); stamp=datetime.fromisoformat(row["timestamp"])
-            except (ValueError,KeyError,TypeError): continue
-            epoch=int(stamp.timestamp()); key=datetime.fromtimestamp(epoch-epoch%width).isoformat(timespec="minutes")
-            buckets[key][row.get("level","UNKNOWN").upper()]+=1
-    return _clip(json.dumps({k:dict(v) for k,v in sorted(buckets.items())},indent=2))
+            total_lines += 1
+            try:
+                row=json.loads(line)
+                stamp=datetime.fromisoformat(row["timestamp"])
+                epoch=int(stamp.timestamp()); key=datetime.fromtimestamp(epoch-epoch%width).isoformat(timespec="minutes")
+                buckets[key][row.get("level","UNKNOWN").upper()]+=1
+            except (ValueError,KeyError,TypeError):
+                upper = line.upper()
+                for lvl in ("CRITICAL", "FATAL", "ERROR", "WARN", "WARNING", "INFO", "DEBUG"):
+                    if re.search(rf"\b{lvl}\b", upper):
+                        plaintext_levels[lvl] += 1
+                        break
+    if buckets:
+        return _clip(json.dumps({k:dict(v) for k,v in sorted(buckets.items())},indent=2))
+    return _clip(json.dumps({
+        "format": "plaintext",
+        "total_lines": total_lines,
+        "level_counts": dict(plaintext_levels),
+        "note": "No ISO-timestamped JSON entries found; showing plaintext level keyword counts."
+    }, indent=2))
 
 def search_code(query: str) -> str:
     terms = query.casefold().split()

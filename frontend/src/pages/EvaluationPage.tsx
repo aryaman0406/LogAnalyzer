@@ -91,7 +91,7 @@ export function EvaluationPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <GlassCard className="p-3.5 flex flex-col justify-between" hover={false}>
           <span className="text-[10px] font-mono text-text-muted uppercase font-semibold block">
             Mean Score (D & E)

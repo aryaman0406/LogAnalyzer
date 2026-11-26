@@ -74,7 +74,8 @@ class Investigator:
 
     def investigate(self, query: str, *, log_file: str = "data/logs/sample_app.jsonl", use_tools: bool = True,
                     use_anomaly_detector: bool = True, on_event: Callable[[dict], None] | None = None,
-                    provider: str | None = None, model: str | None = None) -> dict[str, Any]:
+                    provider: str | None = None, model: str | None = None,
+                    incident_id: str | None = None) -> dict[str, Any]:
         trace_id = str(uuid.uuid4())
         trace_dir = ROOT / "data" / "traces"
         trace_dir.mkdir(parents=True, exist_ok=True)
@@ -82,7 +83,8 @@ class Investigator:
         events = []
         investigation_start_time = time.perf_counter()
 
-        incident_id = os.getenv("ACTIVE_INCIDENT", None)
+        if incident_id is None:
+            incident_id = os.getenv("ACTIVE_INCIDENT", None)
         if not incident_id and "INC-" in query:
             inc_match = re.search(r"INC-\d{2}", query)
             if inc_match: incident_id = inc_match.group(0)

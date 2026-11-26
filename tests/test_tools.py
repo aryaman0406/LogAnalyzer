@@ -44,3 +44,37 @@ def test_search_code_skips_excluded_folders_and_large_files():
         data_test_file.unlink(missing_ok=True)
         source_test_file.unlink(missing_ok=True)
 
+def test_grep_logs_handles_invalid_regex():
+    import json
+    p = tools.ROOT / "data" / "test_grep_invalid_regex.log"
+    p.write_text("2026-01-01 ERROR something failed\n", encoding="utf-8")
+    try:
+        out = json.loads(tools.grep_logs("data/test_grep_invalid_regex.log", "[unclosed"))
+        assert out["error"] == "re.error"
+    finally:
+        p.unlink(missing_ok=True)
+
+def test_read_logs_filters_plaintext_by_level():
+    p = tools.ROOT / "data" / "test_plaintext_level.log"
+    p.write_text("2026-01-01 INFO healthy\n2026-01-01 ERROR db timeout\n", encoding="utf-8")
+    try:
+        out = tools.read_logs("data/test_plaintext_level.log", level="ERROR")
+        assert "db timeout" in out
+        assert "healthy" not in out
+    finally:
+        p.unlink(missing_ok=True)
+
+def test_log_stats_supports_plaintext_logs():
+    import json
+    p = tools.ROOT / "data" / "test_plaintext_stats.log"
+    p.write_text("INFO booted\nERROR failed connection\nWARN slow query\n", encoding="utf-8")
+    try:
+        stats = json.loads(tools.log_stats("data/test_plaintext_stats.log"))
+        assert stats["format"] == "plaintext"
+        assert stats["total_lines"] == 3
+        assert stats["level_counts"]["ERROR"] == 1
+        assert stats["level_counts"]["WARN"] == 1
+        assert stats["level_counts"]["INFO"] == 1
+    finally:
+        p.unlink(missing_ok=True)
+

@@ -96,6 +96,18 @@ export function InvestigatePage() {
       return
     }
 
+    if (file.size > 5 * 1024 * 1024) {
+      setImageFile(null)
+      setImageDiagnosis(null)
+      setLogFileName('')
+      setLogContent('')
+      setLogLineCount(0)
+      setLogSizeBytes(0)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setImageError('Log files must be 5 MB or smaller.')
+      return
+    }
+
     setImageFile(null)
     setImageDiagnosis(null)
     setImageError(null)
@@ -113,18 +125,24 @@ export function InvestigatePage() {
 
   const handlePasteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
+    const sizeBytes = new Blob([text]).size
+    if (sizeBytes > 5 * 1024 * 1024) {
+      setImageError('Pasted logs must be 5 MB or smaller.')
+      return
+    }
     // Always clear image state when user types in paste area
     setImageFile(null)
     setImageDiagnosis(null)
     setImageError(null)
     // Replace image filename with pasted_log.txt; keep existing log filename if already set
-    if (!logFileName || logFileName === logFileName) {
-      if (text && !logContent) setLogFileName('pasted_log.txt')
-      else if (!text) setLogFileName('')
+    if (text && (!logContent || imageFile)) {
+      setLogFileName('pasted_log.txt')
+    } else if (!text) {
+      setLogFileName('')
     }
     setLogContent(text)
     setLogLineCount(text.split('\n').filter(Boolean).length)
-    setLogSizeBytes(new Blob([text]).size)
+    setLogSizeBytes(sizeBytes)
   }
 
   const handleClearCustomLog = () => {
@@ -218,7 +236,7 @@ export function InvestigatePage() {
               selected={incidentId}
               onSelect={(id) => {
                 setIncidentId(id)
-                if (logContent) handleClearCustomLog()
+                if (logContent || imageFile || imageError || logFileName) handleClearCustomLog()
               }}
               disabled={isProcessing}
             />
