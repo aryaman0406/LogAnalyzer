@@ -51,14 +51,25 @@ export interface LlmFallback {
   reason?: string | null
 }
 
+export interface SecondaryIncident {
+  title: string
+  severity: string
+  root_cause: string
+  evidence_ref?: string
+  suggested_fix?: string
+}
+
 export interface InvestigationReport {
   incident_id?: string
   severity?: string
+  confirmation_status?: 'confirmed' | 'likely' | 'inferred' | string
+  source_scope?: string
   affected_service?: string
   root_cause: string
   confidence?: number | null
   confidence_basis?: string | null
   evidence: Evidence[]
+  secondary_incidents?: SecondaryIncident[]
   suggested_fix: string
   affected_file: string
   affected_function: string

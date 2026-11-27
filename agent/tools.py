@@ -74,25 +74,153 @@ def _path(value: str) -> Path:
 def _clip(text: str) -> str:
     return text if len(text) <= MAX_CHARS else text[:MAX_CHARS] + "\n...[truncated]"
 
+_APACHE_RX = re.compile(
+    r'^(?P<ip>\S+)\s+\S+\s+\S+\s+\[(?P<ts>[^\]]+)\]\s+"(?P<method>\S+)\s+(?P<path>\S+)[^"]*"\s+(?P<status>\d{3})\s+(?P<size>\S+)'
+)
+_SYSLOG_AUTH_RX = re.compile(
+    r'^(?P<ts>[A-Z][a-z]{2}\s+\d+\s+\d{2}:\d{2}:\d{2})\s+\S+\s+(?P<service>[^:\[]+)(?:\[\d+\])?:\s+(?P<msg>.*)$'
+)
+_STD_TEXT_RX = re.compile(
+    r'^(?P<ts>\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)\s+(?P<level>CRITICAL|FATAL|ERROR|WARN|WARNING|INFO|DEBUG|TRACE)\s+(?:\[(?P<service>[^\]]+)\]\s+)?(?P<msg>.*)$',
+    re.IGNORECASE,
+)
+_SECURITY_RX = re.compile(
+    r'(failed password|invalid user|authentication failure|\[preauth\]|sudo:\s+.*USER=root|secret_validation_failed|invalid token)',
+    re.IGNORECASE,
+)
+_IP_RX = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
+
+
+def normalize_log_line(raw_line: str) -> dict[str, Any]:
+    """Normalize JSONL, Apache access, SSH/syslog, Java/Python, and plaintext log lines."""
+    line = raw_line.rstrip("\r\n")
+    if not line.strip():
+        return {"format": "empty", "timestamp": "", "level": "", "service": "", "message": "", "security_signal": False}
+
+    # 1. JSONL
+    try:
+        obj = json.loads(line)
+        if isinstance(obj, dict):
+            msg = str(obj.get("message") or obj.get("event") or line)
+            lvl = str(obj.get("level") or "").upper()
+            status = obj.get("status")
+            if not lvl and isinstance(status, int):
+                lvl = "ERROR" if status >= 500 else ("WARN" if status >= 400 else "INFO")
+            sec = bool(_SECURITY_RX.search(msg) or status in {401, 403})
+            return {
+                "format": "jsonl",
+                "timestamp": str(obj.get("timestamp", "")),
+                "level": lvl,
+                "service": str(obj.get("service", "")),
+                "message": msg,
+                "security_signal": sec,
+                "raw": obj,
+            }
+    except json.JSONDecodeError:
+        pass
+
+    # 2. Apache / Nginx access log
+    m = _APACHE_RX.match(line)
+    if m:
+        status = int(m.group("status"))
+        lvl = "ERROR" if status >= 500 else ("WARN" if status >= 400 else "INFO")
+        sec = status in {401, 403} or "/login" in m.group("path").lower() and status >= 400
+        return {
+            "format": "apache_access",
+            "timestamp": m.group("ts"),
+            "level": lvl,
+            "service": "http",
+            "message": f"{m.group('ip')} {m.group('method')} {m.group('path')} status={status}",
+            "status": status,
+            "ip": m.group("ip"),
+            "security_signal": sec,
+        }
+
+    # 3. Standard timestamped text (Python / Java / app logs)
+    m = _STD_TEXT_RX.match(line)
+    if m:
+        lvl = m.group("level").upper()
+        if lvl == "WARNING":
+            lvl = "WARN"
+        msg = m.group("msg")
+        sec = bool(_SECURITY_RX.search(msg))
+        return {
+            "format": "structured_text",
+            "timestamp": m.group("ts"),
+            "level": lvl,
+            "service": (m.group("service") or "").strip(),
+            "message": msg,
+            "security_signal": sec,
+        }
+
+    # 4. Syslog / SSH auth log
+    m = _SYSLOG_AUTH_RX.match(line)
+    if m:
+        msg = m.group("msg")
+        sec = bool(_SECURITY_RX.search(msg))
+        lvl = "WARN" if sec else "INFO"
+        ip_m = _IP_RX.search(msg)
+        return {
+            "format": "syslog",
+            "timestamp": m.group("ts"),
+            "level": lvl,
+            "service": m.group("service").strip(),
+            "message": msg,
+            "ip": ip_m.group(0) if ip_m else "",
+            "security_signal": sec,
+        }
+
+    # 5. Fallback plaintext / unformatted line
+    sec = bool(_SECURITY_RX.search(line))
+    upper = line.upper()
+    detected_lvl = ""
+    for candidate in ("CRITICAL", "FATAL", "ERROR", "WARN", "WARNING", "INFO", "DEBUG"):
+        if re.search(rf"\b{candidate}\b", upper):
+            detected_lvl = "WARN" if candidate == "WARNING" else candidate
+            break
+    return {
+        "format": "plaintext",
+        "timestamp": "",
+        "level": detected_lvl,
+        "service": "",
+        "message": line,
+        "security_signal": sec,
+    }
+
+
 def read_logs(file: str, start_time: str = "", end_time: str = "", level: str = "", limit: int = 100) -> str:
     path = _path(file); limit = max(1, min(int(limit), 500))
     rows=[]
+    req_level = level.upper().strip()
     with path.open(encoding="utf-8",errors="replace") as stream:
-        for line in stream:
-            try: row=json.loads(line)
-            except json.JSONDecodeError: row={"timestamp":"","level":"","message":line.rstrip("\n")}
-            if level:
-                row_level = row.get("level", "").upper()
-                if row_level:
-                    if row_level != level.upper(): continue
-                elif level.upper() not in line.upper():
-                    continue
-            ts=row.get("timestamp","")
+        for line_no, line in enumerate(stream, 1):
+            norm = normalize_log_line(line)
+            if norm["format"] == "empty":
+                continue
+            if req_level:
+                if req_level == "SECURITY":
+                    if not norm["security_signal"]:
+                        continue
+                else:
+                    row_level = norm["level"].upper()
+                    if row_level:
+                        if row_level != req_level: continue
+                    elif req_level not in line.upper():
+                        continue
+            ts = norm["timestamp"]
             if ts:
                 if start_time and ts < start_time: continue
                 if end_time and ts > end_time: continue
             elif start_time or end_time:
                 continue
+            row = norm.get("raw") if norm["format"] == "jsonl" else {
+                "line_no": line_no,
+                "timestamp": norm["timestamp"],
+                "level": norm["level"],
+                "service": norm["service"],
+                "message": norm["message"],
+                **({"security_signal": True} if norm["security_signal"] else {}),
+            }
             rows.append(row)
             if len(rows)>=limit: break
     return _clip("\n".join(json.dumps(r,ensure_ascii=False) for r in rows))
@@ -110,29 +238,50 @@ def grep_logs(file: str, pattern: str, context_lines: int = 2) -> str:
 def log_stats(file: str, bucket_minutes: int = 5) -> str:
     width=max(1,min(int(bucket_minutes),1440))*60; buckets=defaultdict(Counter)
     total_lines = 0
-    plaintext_levels: Counter[str] = Counter()
+    level_counts: Counter[str] = Counter()
+    formats: Counter[str] = Counter()
+    security_events: list[dict[str, Any]] = []
+    security_ip_counts: Counter[str] = Counter()
+
     with _path(file).open(encoding="utf-8",errors="replace") as stream:
-        for line in stream:
+        for line_no, line in enumerate(stream, 1):
+            norm = normalize_log_line(line)
+            if norm["format"] == "empty":
+                continue
             total_lines += 1
-            try:
-                row=json.loads(line)
-                stamp=datetime.fromisoformat(row["timestamp"])
-                epoch=int(stamp.timestamp()); key=datetime.fromtimestamp(epoch-epoch%width).isoformat(timespec="minutes")
-                buckets[key][row.get("level","UNKNOWN").upper()]+=1
-            except (ValueError,KeyError,TypeError):
-                upper = line.upper()
-                for lvl in ("CRITICAL", "FATAL", "ERROR", "WARN", "WARNING", "INFO", "DEBUG"):
-                    if re.search(rf"\b{lvl}\b", upper):
-                        plaintext_levels[lvl] += 1
-                        break
-    if buckets:
-        return _clip(json.dumps({k:dict(v) for k,v in sorted(buckets.items())},indent=2))
-    return _clip(json.dumps({
-        "format": "plaintext",
+            formats[norm["format"]] += 1
+            lvl = norm["level"] or "UNKNOWN"
+            level_counts[lvl] += 1
+
+            if norm["security_signal"]:
+                ip = norm.get("ip") or ""
+                if ip:
+                    security_ip_counts[ip] += 1
+                if len(security_events) < 10:
+                    security_events.append({"line_no": line_no, "message": norm["message"][:160]})
+
+            if norm["timestamp"]:
+                try:
+                    stamp = datetime.fromisoformat(norm["timestamp"].replace("Z", "+00:00"))
+                    epoch = int(stamp.timestamp())
+                    key = datetime.fromtimestamp(epoch - epoch % width).isoformat(timespec="minutes")
+                    buckets[key][lvl] += 1
+                except ValueError:
+                    pass
+
+    payload: dict[str, Any] = {
         "total_lines": total_lines,
-        "level_counts": dict(plaintext_levels),
-        "note": "No ISO-timestamped JSON entries found; showing plaintext level keyword counts."
-    }, indent=2))
+        "formats": dict(formats),
+        "level_counts": dict(level_counts),
+        "security_signals_count": len(security_events),
+    }
+    if security_events:
+        payload["security_events_sample"] = security_events[:5]
+    if security_ip_counts:
+        payload["repeated_security_ips"] = {ip: cnt for ip, cnt in security_ip_counts.items() if cnt >= 2}
+    if buckets:
+        payload["time_buckets"] = {k: dict(v) for k, v in sorted(buckets.items())}
+    return _clip(json.dumps(payload, indent=2))
 
 def search_code(query: str) -> str:
     terms = query.casefold().split()

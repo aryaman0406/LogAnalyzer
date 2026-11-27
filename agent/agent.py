@@ -11,12 +11,12 @@ logger = logging.getLogger(__name__)
 from agent.llm import LLMClient
 from agent.prompts import SYSTEM_PROMPT
 from agent.state import InvestigationState
-from agent.tools import TOOL_SCHEMAS, execute_tool, set_current_ml_result
+from agent.tools import TOOL_SCHEMAS, execute_tool, log_stats, normalize_log_line, set_current_ml_result
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def validate_report(text: str) -> dict[str, Any]:
-    """Parse final JSON and flag references to missing files/functions."""
+def validate_report(text: str, log_text: str = "", is_internal_repo_log: bool = True) -> dict[str, Any]:
+    """Parse final JSON, calibrate confidence, normalize secondary incidents, and flag ungrounded citations."""
     match = re.search(r"\{[\s\S]*\}", text)
     if not match: raise ValueError("model response did not contain JSON")
     report = json.loads(match.group(0))
@@ -38,8 +38,24 @@ def validate_report(text: str) -> dict[str, Any]:
     if report.get("confidence") is not None:
         report["confidence"] = max(0.0, min(1.0, float(report["confidence"])))
     report["severity"] = report.get("severity", "high")
-    report["affected_service"] = report.get("affected_service", "sample_app")
-    
+    report["affected_service"] = report.get("affected_service", "sample_app" if is_internal_repo_log else "external_service")
+
+    # Normalize secondary_incidents
+    raw_secondary = report.get("secondary_incidents")
+    if not isinstance(raw_secondary, list):
+        raw_secondary = []
+    report["secondary_incidents"] = [
+        {
+            "title": str(item.get("title", "Secondary incident")),
+            "severity": str(item.get("severity", "medium")),
+            "root_cause": str(item.get("root_cause", "")),
+            "evidence_ref": str(item.get("evidence_ref", "")),
+            "suggested_fix": str(item.get("suggested_fix", "")),
+        }
+        for item in raw_secondary
+        if isinstance(item, dict) and item.get("root_cause")
+    ]
+
     # Normalize evidence list
     if not isinstance(report.get("evidence"), list):
         report["evidence"] = []
@@ -51,20 +67,53 @@ def validate_report(text: str) -> dict[str, Any]:
             normalized_evidence.append({"type": "log", "reference": "general", "detail": ev})
     report["evidence"] = normalized_evidence
 
-    target = ROOT / str(report["affected_file"])
+    affected_file_str = str(report["affected_file"] or "")
+    target = ROOT / affected_file_str
     hallucinations = []
-    if not target.is_file():
-        hallucinations.append(f"file does not exist: {report['affected_file']}")
-    else:
+    repo_verified = False
+
+    if target.is_file():
+        repo_verified = True
         source = target.read_text(encoding="utf-8", errors="replace")
         func_name = report.get("affected_function")
         if func_name and not re.search(rf"\bdef\s+{re.escape(func_name)}\s*\(", source):
-            # Check incident_modes
             found_in_modes = any(re.search(rf"\bdef\s+{re.escape(func_name)}\s*\(", p.read_text(encoding="utf-8", errors="replace"))
                                 for p in (ROOT / "sample_app" / "incident_modes").glob("*.py"))
             if not found_in_modes:
                 hallucinations.append(f"function does not exist in cited file: {func_name}")
+    else:
+        # Check whether the cited file/component appears verbatim in the analyzed log
+        base_name = Path(affected_file_str).name if affected_file_str else ""
+        in_log = bool(log_text and ((affected_file_str and affected_file_str in log_text) or (base_name and base_name in log_text)))
+        if not is_internal_repo_log and in_log:
+            report["source_scope"] = "external_log"
+        elif is_internal_repo_log:
+            hallucinations.append(f"file does not exist: {report['affected_file']}")
+        else:
+            report["source_scope"] = "external_unavailable"
+            if affected_file_str and affected_file_str not in {"unknown", "N/A", "none"} and not in_log:
+                hallucinations.append(f"cited external file not found in repo or log: {report['affected_file']}")
+
     report["hallucination_warnings"] = hallucinations
+
+    # Calibrate confirmation_status & confidence against actual verification scope
+    raw_status = str(report.get("confirmation_status", "")).lower()
+    if hallucinations:
+        report["confirmation_status"] = "inferred"
+        if report["confidence"] is not None:
+            report["confidence"] = min(report["confidence"], 0.55)
+        report["confidence_basis"] = "penalized for unverified file/function citations"
+    elif repo_verified:
+        report["confirmation_status"] = raw_status if raw_status in {"confirmed", "likely"} else "confirmed"
+        report["confidence_basis"] = "repo-and-log verified confidence"
+    else:
+        has_stack_trace = bool(re.search(r"(Exception|Traceback|at\s+\S+\s*\(|:\d+\))", log_text))
+        report["confirmation_status"] = raw_status if raw_status in {"confirmed", "likely", "inferred"} else ("likely" if has_stack_trace else "inferred")
+        cap = 0.85 if has_stack_trace else 0.78
+        if report["confidence"] is not None:
+            report["confidence"] = min(report["confidence"], cap)
+        report["confidence_basis"] = "log-only inference (external source unavailable)"
+
     return report
 
 class Investigator:
@@ -141,6 +190,30 @@ class Investigator:
         ml_duration = time.perf_counter() - t_ml_start
         logger.info("[TIMING] Phase: ML call | duration=%.3fs | available=%s", ml_duration, ml_result.available)
 
+        # Severity-aware post-processing for external ML ranking:
+        # The Render model is trained on Travis CI logs only and may rank normal INFO/200 lines
+        # above ERROR/FATAL/security lines on other log formats. Boost critical/security lines
+        # and surface a clear warning when out-of-distribution ranking occurs.
+        if ml_result.available and ml_result.top_lines:
+            def _line_priority(item: dict[str, Any]) -> tuple[int, float]:
+                norm = normalize_log_line(str(item.get("text", "")))
+                lvl = norm.get("level", "")
+                if norm.get("security_signal"):
+                    return (3, float(item.get("score", 0.0)))
+                if lvl in {"CRITICAL", "FATAL", "ERROR"}:
+                    return (2, float(item.get("score", 0.0)))
+                if lvl == "WARN":
+                    return (1, float(item.get("score", 0.0)))
+                return (0, float(item.get("score", 0.0)))
+
+            first_prio = _line_priority(ml_result.top_lines[0])[0]
+            max_prio = max(_line_priority(t)[0] for t in ml_result.top_lines)
+            if max_prio > first_prio and first_prio == 0:
+                ml_result.warnings.append(
+                    "External ML model (trained on Travis CI) ranked normal INFO/200 lines above critical/security lines; re-ordered by severity."
+                )
+                ml_result.top_lines = sorted(ml_result.top_lines, key=_line_priority, reverse=True)
+
         # Retrieve RAG context if available
         rag_block = ""
         t_rag_start = time.perf_counter()
@@ -156,8 +229,18 @@ class Investigator:
         rag_duration = time.perf_counter() - t_rag_start
         logger.info("[TIMING] Phase: RAG retrieval | duration=%.3fs | hits=%d", rag_duration, len(rag_hits))
 
+        # Pre-compute normalized log summary (handles JSONL, Apache, SSH/syslog, Java/Python, plaintext)
+        stats_block = ""
+        if resolved_log_path.is_file():
+            try:
+                stats_block = f"Normalized Log Summary:\n{log_stats(log_file)}"
+            except Exception:
+                stats_block = ""
+
         ml_prompt_block = ml_result.as_prompt_block(max_lines=10)
         context_parts = []
+        if stats_block:
+            context_parts.append(stats_block)
         if rag_block:
             context_parts.append(rag_block)
         if ml_prompt_block:
@@ -192,14 +275,18 @@ class Investigator:
             logger.info("[TIMING] Phase: LLM call | step=%d | provider=%s | duration=%.3fs", step, client.provider, llm_duration)
             calls = result["tool_calls"]
 
+            is_internal_repo_log = ("sample_app" in log_file or "INC-" in (incident_id or "") or "sample" in log_file)
+
             if not calls:
-                report = validate_report(result["text"])
+                report = validate_report(result["text"], log_text=log_text, is_internal_repo_log=is_internal_repo_log)
                 report["incident_id"] = incident_id
                 if "confidence_basis" not in report:
                     if client.provider in {"diagnostic", "local", "offline"}:
                         report["confidence_basis"] = "offline fallback, no calibrated confidence"
                     elif client.provider in {"gemini", "google"}:
                         report["confidence_basis"] = "LLM self-assessed confidence"
+                elif client.provider in {"diagnostic", "local", "offline"}:
+                    report["confidence_basis"] = "offline fallback, no calibrated confidence"
 
                 # Merge duplicate evidence that points to the same line into one item listing both sources
                 import re as _re
@@ -343,8 +430,17 @@ class Investigator:
                 is_internal_repo_log = ("sample_app" in log_file or "INC-" in (incident_id or "") or "sample" in log_file)
                 if call["name"] in {"read_logs", "grep_logs"}:
                     for line in output.splitlines():
-                        if "ERROR" in line or "error=" in line or "error occurred" in line.casefold() or "error occured" in line.casefold() or "exited with 1" in line.casefold():
-                            state.add_evidence("log", args.get("file", log_file), line[:200], source="Application Logs")
+                        norm_out = normalize_log_line(line)
+                        if norm_out.get("security_signal") or norm_out.get("level") in {"ERROR", "CRITICAL", "FATAL"} or "error=" in line or "error occurred" in line.casefold() or "exited with 1" in line.casefold():
+                            ref = args.get("file", log_file)
+                            line_match = re.match(r"^(\d+):\s", line)
+                            if line_match:
+                                ref = f"line {line_match.group(1)}"
+                            elif '"line_no":' in line:
+                                ln_m = re.search(r'"line_no":\s*(\d+)', line)
+                                if ln_m:
+                                    ref = f"line {ln_m.group(1)}"
+                            state.add_evidence("log", ref, line[:200], source="Application Logs")
                             break
                 elif call["name"] == "detect_anomalies":
                     try:

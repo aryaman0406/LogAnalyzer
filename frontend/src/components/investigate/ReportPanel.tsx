@@ -135,6 +135,18 @@ export function ReportPanel({ report, error, investigationId }: ReportPanelProps
               <Badge variant={severityVariant} className="uppercase text-caption font-semibold">
                 {report.severity || 'HIGH'} SEVERITY
               </Badge>
+              {report.confirmation_status && (
+                <Badge
+                  variant={report.confirmation_status === 'confirmed' ? 'success' : report.confirmation_status === 'likely' ? 'accent' : 'warn'}
+                  className="uppercase text-caption font-semibold"
+                >
+                  {report.confirmation_status === 'confirmed'
+                    ? 'Confirmed'
+                    : report.confirmation_status === 'likely'
+                    ? 'Likely'
+                    : 'Inferred'}
+                </Badge>
+              )}
             </div>
 
             <div className="flex items-center gap-3 text-caption font-mono text-text-muted">
@@ -197,6 +209,48 @@ export function ReportPanel({ report, error, investigationId }: ReportPanelProps
             <pre className="font-mono text-sm leading-relaxed p-4 rounded bg-background border border-border text-text-primary overflow-x-auto max-h-64">
               {report.suggested_fix}
             </pre>
+          </div>
+        )}
+
+        {/* Additional Independent Incidents */}
+        {report.secondary_incidents && report.secondary_incidents.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-muted font-mono">
+                Additional Independent Incidents
+              </h3>
+              <span className="text-caption font-mono text-text-muted">
+                {report.secondary_incidents.length} detected
+              </span>
+            </div>
+            <div className="space-y-2.5">
+              {report.secondary_incidents.map((sec, i) => (
+                <div key={i} className="p-4 rounded border border-border bg-surface space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-text-primary">{sec.title}</span>
+                    <div className="flex items-center gap-2">
+                      {sec.evidence_ref && (
+                        <span className="font-mono text-caption text-text-muted px-2 py-0.5 rounded bg-background border border-border">
+                          {sec.evidence_ref}
+                        </span>
+                      )}
+                      <Badge
+                        variant={(sec.severity || '').toLowerCase() === 'critical' ? 'error' : (sec.severity || '').toLowerCase() === 'high' ? 'warn' : 'secondary'}
+                        className="uppercase text-caption"
+                      >
+                        {sec.severity || 'medium'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">{sec.root_cause}</p>
+                  {sec.suggested_fix && (
+                    <p className="text-xs font-mono text-text-muted bg-background p-2.5 rounded border border-border">
+                      Fix: {sec.suggested_fix}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

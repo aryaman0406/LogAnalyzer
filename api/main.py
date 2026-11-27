@@ -268,7 +268,14 @@ def history():
 def patch_preview(ident: str):
     report = get_investigation(ident)["result"]
     if not report or "suggested_fix" not in report: raise HTTPException(409, "no suggested fix is available")
-    return {"diff": "", "suggested_fix": report["suggested_fix"], "message": "No patch was generated; review the suggested fix before implementing."}
+    affected_file = str(report.get("affected_file", ""))
+    in_repo = bool(affected_file and (ROOT / affected_file).is_file())
+    msg = (
+        "No patch was generated; review the suggested fix before implementing."
+        if in_repo
+        else "Source file is external to this repository; unified diff cannot be generated locally. Review the suggested fix below."
+    )
+    return {"diff": "", "suggested_fix": report["suggested_fix"], "source_scope": "repo" if in_repo else "external_unavailable", "message": msg}
 
 @app.post("/api/investigations/{ident}/patch/apply")
 def patch_apply(ident: str, approval: ApprovalRequest):
