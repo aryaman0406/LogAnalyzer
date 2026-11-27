@@ -9,15 +9,27 @@ import { ImageDiagnosisPanel } from '@/components/investigate/ImageDiagnosisPane
 import { useInvestigation } from '@/lib/hooks/useInvestigation'
 import { analyzeImage, fetchModels } from '@/lib/api'
 import type { ImageDiagnosis } from '@/types'
-import { UploadCloud, FileText, Image as ImageIcon, X } from 'lucide-react'
+import {
+  UploadCloud,
+  FileText,
+  Image as ImageIcon,
+  X,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  FlaskConical,
+} from 'lucide-react'
 
 export function InvestigatePage() {
+  const [inputMode, setInputMode] = useState<'custom' | 'demo'>('custom')
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false)
   const [incidentId, setIncidentId] = useState<string>('INC-01')
   const [provider, setProvider] = useState<string>('gemini')
   const [useAnomalyDetector, setUseAnomalyDetector] = useState<boolean>(true)
   const [useTools, setUseTools] = useState<boolean>(true)
   const [logFile, setLogFile] = useState<string>('')
-  
+
   // Custom Log File Upload / Paste state
   const [logFileName, setLogFileName] = useState<string>('')
   const [logContent, setLogContent] = useState<string>('')
@@ -86,6 +98,7 @@ export function InvestigatePage() {
         setImageError('Images must be 10 MB or smaller.')
         return
       }
+      setInputMode('custom')
       setImageFile(file)
       setImageDiagnosis(null)
       setImageError(null)
@@ -108,6 +121,7 @@ export function InvestigatePage() {
       return
     }
 
+    setInputMode('custom')
     setImageFile(null)
     setImageDiagnosis(null)
     setImageError(null)
@@ -130,11 +144,9 @@ export function InvestigatePage() {
       setImageError('Pasted logs must be 5 MB or smaller.')
       return
     }
-    // Always clear image state when user types in paste area
     setImageFile(null)
     setImageDiagnosis(null)
     setImageError(null)
-    // Replace image filename with pasted_log.txt; keep existing log filename if already set
     if (text && (!logContent || imageFile)) {
       setLogFileName('pasted_log.txt')
     } else if (!text) {
@@ -158,7 +170,7 @@ export function InvestigatePage() {
   }
 
   const handleStart = async () => {
-    if (imageFile) {
+    if (inputMode === 'custom' && imageFile) {
       const controller = new AbortController()
       imageAbortRef.current?.abort()
       imageAbortRef.current = controller
@@ -182,9 +194,9 @@ export function InvestigatePage() {
     }
 
     run({
-      incident_id: logContent ? null : (incidentId || null),
+      incident_id: inputMode === 'demo' ? (incidentId || 'INC-01') : null,
       log_file: logFile || undefined,
-      log_content: logContent || undefined,
+      log_content: inputMode === 'custom' ? (logContent || undefined) : undefined,
       use_anomaly_detector: useAnomalyDetector,
       use_tools: useTools,
       provider: provider,
@@ -208,160 +220,232 @@ export function InvestigatePage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
   }
 
+  const canRun =
+    inputMode === 'demo'
+      ? Boolean(incidentId)
+      : Boolean(logContent.trim() || logFile.trim() || imageFile) && !(Boolean(imageError) && Boolean(imageFile))
+
   return (
     <div className="space-y-6">
       {/* Page Title & Context Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
-            Investigate Incident
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary flex items-center gap-2.5">
+            <span>Analyze Logs & Errors</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 border border-accent/30 px-2.5 py-0.5 text-xs font-medium text-accent">
+              <Sparkles className="h-3 w-3" />
+              AI Agent
+            </span>
           </h1>
-          <p className="text-base text-text-secondary mt-1">
-            Analyze incident logs, search repository source and Git history, and review the resulting evidence.
+          <p className="text-sm text-text-secondary mt-1">
+            Upload a log file, paste raw errors, or drop an error screenshot to see <strong className="text-text-primary">which line failed</strong>, <strong className="text-text-primary">why it happened</strong>, and <strong className="text-text-primary">how to fix it</strong>.
           </p>
         </div>
       </div>
 
-      {/* Main 2-Column or 3-Column Layout */}
+      {/* Main 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Log Selection, Upload, and Engine Config (4 cols) */}
+        {/* Left Column: Clean Mode-Based Input Card (4 cols) */}
         <div className="lg:col-span-4 space-y-4">
-          <div className="surface-card p-5 space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted font-mono">
-              Investigation Target
-            </h2>
-
-            {/* Incident Scenario Picker */}
-            <IncidentPicker
-              selected={incidentId}
-              onSelect={(id) => {
-                setIncidentId(id)
-                if (logContent || imageFile || imageError || logFileName) handleClearCustomLog()
-              }}
-              disabled={isProcessing}
-            />
-
-            {/* Custom Log Upload / Paste Area */}
-            <div className="pt-3 border-t border-border space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-caption font-mono uppercase text-text-muted font-semibold">
-                  Upload or paste a log, or choose an error screenshot
-                </label>
-                {logFileName && (
-                  <button
-                    onClick={handleClearCustomLog}
-                    className="text-caption font-mono text-status-error hover:underline flex items-center gap-1"
-                  >
-                    <X className="h-3 w-3" /> Clear
-                  </button>
-                )}
-              </div>
-
-              {/* Upload Drop Zone / Input */}
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border border-dashed border-border hover:border-border-hover rounded p-3 text-center cursor-pointer bg-surface/40 hover:bg-surface transition-colors space-y-1"
+          <div className="surface-card p-5 space-y-4 border-t-2 border-t-accent">
+            {/* Mode Switcher */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-surface border border-border">
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={() => setInputMode('custom')}
+                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-semibold transition-all ${
+                  inputMode === 'custom'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".txt,.log,.jsonl,image/png,image/jpeg,image/gif,image/webp"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  disabled={isProcessing}
-                />
-                <UploadCloud className="h-5 w-5 mx-auto text-text-muted" />
-                <div className="text-sm text-text-primary font-medium">
-                  {logFileName ? logFileName : 'Choose a log file or error image'}
-                </div>
-                <div className="text-caption text-text-muted">
-                  Supports .txt, .log, .jsonl, PNG, JPEG, GIF, WebP
-                </div>
-              </div>
-
-              {/* Paste Textarea */}
-              {!imageFile && <div className="space-y-1">
-                <textarea
-                  value={logContent}
-                  onChange={handlePasteChange}
-                  disabled={isProcessing}
-                  placeholder="Or paste raw incident log lines here..."
-                  rows={3}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </div>}
-
-              {/* File details chip if present */}
-              {logFileName && (
-                <div className="p-2.5 rounded bg-surface border border-border flex items-center justify-between text-caption font-mono">
-                  <div className="flex items-center gap-1.5 truncate">
-                    {imageFile
-                      ? <ImageIcon className="h-3.5 w-3.5 text-accent shrink-0" />
-                      : <FileText className="h-3.5 w-3.5 text-accent shrink-0" />}
-                    <span className="truncate text-text-primary font-medium">{logFileName}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-text-muted shrink-0">
-                    {!imageFile && <><span>{logLineCount} lines</span><span>•</span></>}
-                    <span>{formatBytes(logSizeBytes)}</span>
-                  </div>
-                </div>
-              )}
-              {imageFile && (
-                <p className="text-caption text-text-muted">
-                  Image analysis sends this file to Google Gemini.
-                </p>
-              )}
-              {imageError && !imageFile && (
-                <p role="alert" className="text-sm text-status-error">{imageError}</p>
-              )}
+                <UploadCloud className="h-3.5 w-3.5" />
+                <span>Your Log / Image</span>
+              </button>
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={() => {
+                  setInputMode('demo')
+                  if (imageFile) handleClearCustomLog()
+                }}
+                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-semibold transition-all ${
+                  inputMode === 'demo'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <FlaskConical className="h-3.5 w-3.5" />
+                <span>Demo Scenarios</span>
+              </button>
             </div>
 
-            {/* Investigation Controls */}
-            <InvestigationControls
-              useAnomalyDetector={useAnomalyDetector}
-              setUseAnomalyDetector={setUseAnomalyDetector}
-              useTools={useTools}
-              setUseTools={setUseTools}
-              logFile={logFile}
-              setLogFile={setLogFile}
-              provider={provider}
-              setProvider={setProvider}
-              geminiConfigured={geminiConfigured}
-              disabled={isProcessing}
-            />
+            {inputMode === 'custom' ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-text-primary">
+                    Upload log file or screenshot
+                  </label>
+                  {logFileName && (
+                    <button
+                      type="button"
+                      onClick={handleClearCustomLog}
+                      className="text-xs font-medium text-status-error hover:underline flex items-center gap-1"
+                    >
+                      <X className="h-3.5 w-3.5" /> Clear
+                    </button>
+                  )}
+                </div>
 
-            {/* Clear Primary Action Button */}
-            <div className="pt-2">
+                {/* Upload Drop Zone */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="group border-2 border-dashed border-border hover:border-accent rounded-lg p-4 text-center cursor-pointer bg-surface/50 hover:bg-accent/5 transition-all space-y-1.5"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".txt,.log,.jsonl,image/png,image/jpeg,image/gif,image/webp"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    disabled={isProcessing}
+                  />
+                  <div className="mx-auto w-9 h-9 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
+                    <UploadCloud className="h-4 w-4" />
+                  </div>
+                  <div className="text-sm text-text-primary font-medium truncate px-2">
+                    {logFileName ? logFileName : 'Click to choose a log or screenshot'}
+                  </div>
+                  <div className="text-xs text-text-muted">
+                    Supports .log, .txt, .jsonl (5 MB) · PNG, JPG, WebP (10 MB)
+                  </div>
+                </div>
+
+                {/* Paste Textarea */}
+                {!imageFile && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-text-secondary block">
+                      Or paste your log lines directly
+                    </label>
+                    <textarea
+                      value={logContent}
+                      onChange={handlePasteChange}
+                      disabled={isProcessing}
+                      placeholder="Paste Python, Java, Nginx, SSH, or JSONL logs here..."
+                      rows={6}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent leading-relaxed"
+                    />
+                  </div>
+                )}
+
+                {/* File details chip */}
+                {logFileName && (
+                  <div className="p-2.5 rounded-lg bg-accent/10 border border-accent/25 flex items-center justify-between text-xs font-mono">
+                    <div className="flex items-center gap-2 truncate">
+                      {imageFile
+                        ? <ImageIcon className="h-3.5 w-3.5 text-accent shrink-0" />
+                        : <FileText className="h-3.5 w-3.5 text-accent shrink-0" />}
+                      <span className="truncate text-text-primary font-medium">{logFileName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-text-secondary shrink-0">
+                      {!imageFile && <><span>{logLineCount} lines</span><span>•</span></>}
+                      <span>{formatBytes(logSizeBytes)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {imageFile && (
+                  <p className="text-xs text-text-muted">
+                    Screenshot will be inspected by Google Gemini Vision.
+                  </p>
+                )}
+                {imageError && !imageFile && (
+                  <p role="alert" className="text-xs font-medium text-status-error bg-status-error-bg border border-status-error-border rounded px-3 py-2">
+                    {imageError}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-text-secondary">
+                  Test the agent on a built-in simulated failure from the sample e-commerce app:
+                </p>
+                <IncidentPicker
+                  selected={incidentId}
+                  onSelect={(id) => {
+                    setIncidentId(id)
+                    if (logContent || imageFile || imageError || logFileName) handleClearCustomLog()
+                  }}
+                  disabled={isProcessing}
+                />
+              </div>
+            )}
+
+            {/* Primary Action Button */}
+            <div className="pt-1">
               <RunButton
                 onRun={handleStart}
                 onCancel={handleCancel}
                 running={isProcessing}
-                disabled={
-                  isProcessing ||
-                  (!incidentId && !logFile && !logContent && !imageFile) ||
-                  (Boolean(imageError) && Boolean(imageFile))
-                }
-                actionLabel={imageFile ? 'Analyze Image' : 'Run Investigation'}
-                stopLabel={imageFile ? 'Stop Image Analysis' : 'Stop Investigation'}
+                disabled={!isProcessing && !canRun}
+                actionLabel={imageFile && inputMode === 'custom' ? 'Analyze Screenshot' : 'Analyze Logs'}
+                stopLabel={imageFile && inputMode === 'custom' ? 'Stop Image Analysis' : 'Stop Analysis'}
               />
+            </div>
+
+            {/* Collapsible Advanced Settings */}
+            <div className="pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="w-full flex items-center justify-between text-xs font-medium text-text-secondary hover:text-text-primary py-1"
+              >
+                <span className="flex items-center gap-1.5">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-text-muted" />
+                  <span>Advanced Settings</span>
+                </span>
+                <span className="flex items-center gap-2 font-mono text-[11px] text-text-muted">
+                  <span>{provider === 'gemini' ? 'Gemini' : 'Offline'} · {useTools ? 'Tools On' : 'Tools Off'}</span>
+                  {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                </span>
+              </button>
+
+              {showAdvanced && (
+                <div className="mt-2">
+                  <InvestigationControls
+                    useAnomalyDetector={useAnomalyDetector}
+                    setUseAnomalyDetector={setUseAnomalyDetector}
+                    useTools={useTools}
+                    setUseTools={setUseTools}
+                    logFile={logFile}
+                    setLogFile={setLogFile}
+                    provider={provider}
+                    setProvider={setProvider}
+                    geminiConfigured={geminiConfigured}
+                    disabled={isProcessing}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Center / Right Column: Progress Timeline or Report (8 cols) */}
+        {/* Right Column: Progress Timeline or Structured Report (8 cols) */}
         <div className="lg:col-span-8 space-y-4">
-          {imageFile ? (
+          {imageFile && inputMode === 'custom' ? (
             <ImageDiagnosisPanel
               fileName={imageFile.name}
               result={imageDiagnosis}
               loading={imageRunning}
               error={imageError}
             />
-          ) : report ? (
+          ) : report || error ? (
             <ReportPanel
               report={report}
               error={error}
               investigationId={investigationId}
+              uploadedLogContent={inputMode === 'custom' ? logContent : ''}
             />
           ) : (
             <AgentTimeline

@@ -13,6 +13,9 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
+  MapPin,
+  Wrench,
+  Flame,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { InvestigationReport } from '@/types'
@@ -21,9 +24,10 @@ interface ReportPanelProps {
   report: InvestigationReport | null
   error: string | null
   investigationId: string | null
+  uploadedLogContent?: string
 }
 
-export function ReportPanel({ report, error, investigationId }: ReportPanelProps) {
+export function ReportPanel({ report, error, investigationId, uploadedLogContent }: ReportPanelProps) {
   const [copied, setCopied] = useState(false)
   const [expandedLines, setExpandedLines] = useState<Record<number, boolean>>({})
 
@@ -78,13 +82,25 @@ export function ReportPanel({ report, error, investigationId }: ReportPanelProps
       }
     }
   }
+  const sortedCitedLines = Array.from(citedLineNumbers).sort((a, b) => a - b)
+  const rawLogLines = uploadedLogContent ? uploadedLogContent.split(/\r?\n/) : []
+  const highlightedSnippets = sortedCitedLines
+    .map((lineNo) => ({ lineNo, text: rawLogLines[lineNo - 1] }))
+    .filter((item) => Boolean(item.text))
 
+  const sev = (report.severity || 'high').toLowerCase()
   const severityVariant =
-    (report.severity || 'high').toLowerCase() === 'critical'
+    sev === 'critical'
       ? 'error'
-      : (report.severity || 'high').toLowerCase() === 'high'
+      : sev === 'high'
       ? 'warn'
       : 'secondary'
+  const severityAccentBorder =
+    sev === 'critical'
+      ? 'border-l-4 border-l-status-error'
+      : sev === 'high'
+      ? 'border-l-4 border-l-status-warning'
+      : 'border-l-4 border-l-accent'
 
   return (
     <div className="surface-card flex flex-col h-full overflow-hidden">
@@ -125,12 +141,12 @@ export function ReportPanel({ report, error, investigationId }: ReportPanelProps
           </div>
         )}
 
-        {/* Top Summary Card: Headline Root Cause, Severity Pill, LLM Provider, Total Time */}
-        <div className="p-5 rounded border border-border bg-background-overlay/60 space-y-4">
+        {/* 3-Part At-a-Glance Summary: WHERE (Lines) -> WHY (Root Cause) -> HOW (Fix) */}
+        <div className={`p-5 rounded-lg border border-border bg-surface space-y-4 ${severityAccentBorder}`}>
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <span className="font-mono font-bold text-sm text-text-primary px-2.5 py-1 rounded bg-surface border border-border">
-                {report.incident_id || 'INCIDENT'}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono font-bold text-xs text-text-primary px-2.5 py-1 rounded bg-background border border-border">
+                {report.incident_id || 'LOG ANALYSIS'}
               </span>
               <Badge variant={severityVariant} className="uppercase text-caption font-semibold">
                 {report.severity || 'HIGH'} SEVERITY
@@ -149,28 +165,101 @@ export function ReportPanel({ report, error, investigationId }: ReportPanelProps
               )}
             </div>
 
-            <div className="flex items-center gap-3 text-caption font-mono text-text-muted">
+            <div className="flex items-center gap-2.5 text-caption font-mono text-text-muted">
               <span>
-                Provider: <strong className="text-text-primary font-semibold">
+                Engine: <strong className="text-text-primary font-semibold">
                   {report.llm_fallback?.used ? 'Offline Fallback' : 'Gemini'}
                 </strong>
-              </span>
-              <span>•</span>
-              <span>
-                Service: <strong className="text-text-primary font-semibold">{report.affected_service || 'sample_app'}</strong>
               </span>
             </div>
           </div>
 
-          {/* Root Cause as the headline in large type (20-22px / 600) */}
-          <div className="space-y-1.5">
-            <div className="text-caption font-mono uppercase tracking-wider text-text-muted font-semibold">
-              Root Cause Headline
+          {/* 1. WHERE: Exact Line Numbers & Component */}
+          <div className="p-3.5 rounded-lg bg-status-error-bg/40 border border-status-error-border/60 space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-status-error font-mono">
+                <MapPin className="h-3.5 w-3.5" />
+                <span>1. Where the Error Occurred</span>
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {sortedCitedLines.length > 0 ? (
+                  sortedCitedLines.slice(0, 5).map((ln) => (
+                    <span
+                      key={ln}
+                      className="px-2 py-0.5 rounded bg-status-error/15 border border-status-error-border text-status-error font-mono text-xs font-bold"
+                    >
+                      Line {ln}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs font-mono text-text-muted">See evidence below</span>
+                )}
+              </div>
             </div>
-            <div className="text-xl font-semibold text-text-primary leading-snug">
+            {(report.affected_file || report.affected_function) && (
+              <div className="text-xs font-mono text-text-secondary">
+                Location: <strong className="text-text-primary">{report.affected_file || 'unknown'}</strong>
+                {report.affected_function ? <> · <strong className="text-accent">{report.affected_function}</strong></> : null}
+              </div>
+            )}
+            {highlightedSnippets.length > 0 && (
+              <div className="space-y-1 pt-1">
+                {highlightedSnippets.slice(0, 3).map((item) => (
+                  <div
+                    key={item.lineNo}
+                    className="flex items-start gap-2 rounded bg-background/90 border border-status-error-border/50 px-2.5 py-1.5 font-mono text-xs"
+                  >
+                    <span className="text-status-error font-bold shrink-0">L{item.lineNo}:</span>
+                    <span className="text-text-primary break-all">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 2. WHY: Root Cause */}
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-status-warning font-semibold">
+              <Flame className="h-3.5 w-3.5" />
+              <span>2. Why It Happened (Root Cause)</span>
+            </div>
+            <div className="text-lg font-semibold text-text-primary leading-snug">
               {report.root_cause}
             </div>
           </div>
+
+          {/* 3. HOW TO FIX: Actionable Remediation */}
+          {report.suggested_fix && (
+            <div className="p-3.5 rounded-lg bg-status-success-bg/40 border border-status-success-border/70 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-status-success font-mono">
+                  <Wrench className="h-3.5 w-3.5" />
+                  <span>3. How to Fix It</span>
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCopyFix}
+                  className="h-7 px-2.5 text-caption font-mono gap-1.5"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-status-success" />
+                      <span className="text-status-success">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Copy Fix</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
+                {report.suggested_fix}
+              </p>
+            </div>
+          )}
 
           {/* Calibrated Confidence Label */}
           <ConfidenceMeter
@@ -179,38 +268,6 @@ export function ReportPanel({ report, error, investigationId }: ReportPanelProps
             basis={report.confidence_basis}
           />
         </div>
-
-        {/* Suggested Fix Section */}
-        {report.suggested_fix && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-text-muted font-mono">
-                Suggested Patch / Remediation
-              </h3>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleCopyFix}
-                className="h-7 px-3 text-caption font-mono gap-1.5"
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-status-success" />
-                    <span className="text-status-success">Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" />
-                    <span>Copy Fix</span>
-                  </>
-                )}
-              </Button>
-            </div>
-            <pre className="font-mono text-sm leading-relaxed p-4 rounded bg-background border border-border text-text-primary overflow-x-auto max-h-64">
-              {report.suggested_fix}
-            </pre>
-          </div>
-        )}
 
         {/* Additional Independent Incidents */}
         {report.secondary_incidents && report.secondary_incidents.length > 0 && (
