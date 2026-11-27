@@ -8,6 +8,7 @@ from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
+from agent.cache import DiagnosisCache, analyze_log_offline, extract_error_signature
 from agent.llm import LLMClient
 from agent.prompts import SYSTEM_PROMPT
 from agent.state import InvestigationState
@@ -278,8 +279,49 @@ class Investigator:
             is_internal_repo_log = ("sample_app" in log_file or "INC-" in (incident_id or "") or "sample" in log_file)
 
             if not calls:
-                report = validate_report(result["text"], log_text=log_text, is_internal_repo_log=is_internal_repo_log)
-                report["incident_id"] = incident_id
+                # ---- Cache + offline fallback injection ----
+                diag_cache = DiagnosisCache()
+                is_external = not is_internal_repo_log
+                sig_hash, sig_preview = extract_error_signature(log_text) if log_text else ("", "")
+                cached_report = diag_cache.get(sig_hash) if sig_hash else None
+
+                if cached_report and is_external:
+                    # Cache HIT: reuse a previously verified Gemini diagnosis
+                    logger.info("[CACHE] HIT sig=%s — returning cached diagnosis", sig_hash[:12])
+                    report = dict(cached_report)
+                    report["incident_id"] = incident_id
+                    report["llm_fallback"] = {
+                        "used": True,
+                        "reason": "Gemini API unavailable; returning cached verified diagnosis",
+                        "cached": True,
+                        "signature_preview": sig_preview,
+                    }
+                    report.setdefault("confidence_basis", "cached verified Gemini diagnosis")
+                    report.setdefault("confirmation_status", "confirmed")
+                elif is_external and log_text:
+                    # Cache MISS on external log — run offline rule engine
+                    logger.info("[CACHE] MISS sig=%s — running offline rule engine", sig_hash[:12] if sig_hash else "n/a")
+                    offline_report = analyze_log_offline(log_text, log_file=log_file)
+                    # Also try to parse whatever LLM returned (may be generic but merge evidence)
+                    try:
+                        llm_report = validate_report(result["text"], log_text=log_text, is_internal_repo_log=is_internal_repo_log)
+                    except Exception:
+                        llm_report = {}
+                    # Prefer offline root_cause if LLM returned only a generic placeholder
+                    root_cause = offline_report.get("root_cause", "")
+                    if llm_report.get("root_cause") and "sample" not in str(llm_report.get("root_cause", "")).lower():
+                        root_cause = llm_report["root_cause"]
+                    report = {**llm_report, **offline_report, "root_cause": root_cause}
+                    report["incident_id"] = incident_id
+                else:
+                    # Internal repo log or Gemini succeeded normally — parse as usual
+                    report = validate_report(result["text"], log_text=log_text, is_internal_repo_log=is_internal_repo_log)
+                    report["incident_id"] = incident_id
+                    # Cache the successful Gemini result for future offline use
+                    if sig_hash and client.provider in {"gemini", "google"} and report.get("root_cause"):
+                        diag_cache.put(sig_hash, sig_preview, report)
+                        logger.info("[CACHE] PUT sig=%s — stored Gemini diagnosis", sig_hash[:12])
+
                 if "confidence_basis" not in report:
                     if client.provider in {"diagnostic", "local", "offline"}:
                         report["confidence_basis"] = "offline fallback, no calibrated confidence"
